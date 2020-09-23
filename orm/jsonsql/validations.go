@@ -9,7 +9,7 @@ import (
 	"github.com/benoitkugler/structgen/loader"
 )
 
-// should be included once before all functions definitions,
+// SetupSQLCode should be included once before all functions definitions,
 // in order to cleanup potential old definitions
 const SetupSQLCode = `
 CREATE OR REPLACE FUNCTION f_delfunc (OUT func_dropped int
