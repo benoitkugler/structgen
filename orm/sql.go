@@ -12,24 +12,6 @@ import (
 	"github.com/benoitkugler/structgen/utils"
 )
 
-var sqlBasicTypes = map[types.BasicKind]string{
-	types.Bool:    "boolean",
-	types.Int:     "integer",
-	types.Int8:    "integer",
-	types.Int16:   "integer",
-	types.Int32:   "integer",
-	types.Int64:   "integer",
-	types.Uint:    "integer",
-	types.Uint8:   "integer",
-	types.Uint16:  "integer",
-	types.Uint32:  "integer",
-	types.Uint64:  "integer",
-	types.Uintptr: "integer",
-	types.Float32: "real",
-	types.Float64: "real",
-	types.String:  "varchar",
-}
-
 type SQLField struct {
 	GoName   string
 	SQLName  string

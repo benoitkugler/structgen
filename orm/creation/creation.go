@@ -37,6 +37,11 @@ CREATE TABLE %s (
 );`, t.TableName(), strings.Join(fieldsDecl, ",\n"))
 }
 
+// func (t TableGen) addDeclarations(l *loader.Declarations) {
+// 	for _, f :=range t.Fields {
+// 	}
+// }
+
 // encode constraints we want to defer
 type constraint interface {
 	Render() string
