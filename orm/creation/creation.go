@@ -17,7 +17,6 @@ func NewGenHandler(enumsTable enums.EnumTable) loader.Handler {
 
 type TableGen struct {
 	orm.GoSQLTable
-	enumsTable enums.EnumTable
 }
 
 func (t TableGen) Id() string {
@@ -28,7 +27,7 @@ func (t TableGen) Render() string {
 	fieldsDecl := make([]string, len(t.Fields))
 	fieldsName := make([]string, len(t.Fields))
 	for i, f := range t.Fields {
-		fieldsDecl[i] = "\t" + f.CreateStmt(t.enumsTable)
+		fieldsDecl[i] = "\t" + f.CreateStmt()
 		fieldsName[i] = f.SQLName
 	}
 	return fmt.Sprintf(`
@@ -71,11 +70,11 @@ func (l sqlGenHandler) WriteFooter(w io.Writer) error {
 }
 
 func (l *sqlGenHandler) HandleType(topLevelDecl *loader.Declarations, typ types.Type) {
-	table, isTable := orm.TypeToSQLStruct(typ)
+	table, isTable := orm.TypeToSQLStruct(typ, l.enumsTable)
 	if !isTable {
 		return
 	}
-	decl := TableGen{GoSQLTable: table, enumsTable: l.enumsTable}
+	decl := TableGen{GoSQLTable: table}
 	topLevelDecl.Add(decl)
 	for _, f := range table.Fields {
 		foreignConstraint, has := f.ForeignConstraint(decl.Name)

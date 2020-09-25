@@ -44,7 +44,7 @@ func (l Composites) WriteFooter(w io.Writer) error {
 }
 
 func (l *Composites) HandleType(topLevelDecl *loader.Declarations, typ types.Type) {
-	item, isTable := orm.TypeToSQLStruct(typ)
+	item, isTable := orm.TypeToSQLStruct(typ, nil)
 	if !isTable {
 		return
 	}

@@ -106,7 +106,7 @@ func (l Handler) WriteFooter(w io.Writer) error {
 }
 
 func (l *Handler) HandleType(topLevelDecl *loader.Declarations, typ types.Type) {
-	item, isTable := orm.TypeToSQLStruct(typ)
+	item, isTable := orm.TypeToSQLStruct(typ, nil)
 	if !isTable {
 		return
 	}

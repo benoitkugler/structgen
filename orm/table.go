@@ -3,14 +3,16 @@ package orm
 import (
 	"go/types"
 
+	"github.com/benoitkugler/structgen/enums"
+	"github.com/benoitkugler/structgen/orm/sqltypes"
 	"github.com/benoitkugler/structgen/utils"
 )
 
-func TypeToSQLStruct(typ types.Type) (GoSQLTable, bool) {
+func TypeToSQLStruct(typ types.Type, enums enums.EnumTable) (GoSQLTable, bool) {
 	// we only keep named structs
 	if named, isNamed := typ.(*types.Named); isNamed {
 		if str, isStruct := named.Underlying().(*types.Struct); isStruct {
-			table := NewGoSQLTable(named.Obj().Name(), str)
+			table := NewGoSQLTable(named.Obj().Name(), str, enums)
 			return table, true
 		}
 	}
@@ -24,9 +26,9 @@ type GoSQLTable struct {
 	uniqueColumns map[string]bool // sql names for unique columns of the table
 }
 
-func NewGoSQLTable(name string, type_ *types.Struct) GoSQLTable {
+func NewGoSQLTable(name string, type_ *types.Struct, enums enums.EnumTable) GoSQLTable {
 	args := GoSQLTable{Name: name}
-	args.Fields = extractStructFields(type_)
+	args.Fields = extractStructFields(type_, enums)
 	return args
 }
 
@@ -56,7 +58,7 @@ func (m GoSQLTable) TableName() string {
 	return tableName(m.Name)
 }
 
-func extractStructFields(type_ *types.Struct) []SQLField {
+func extractStructFields(type_ *types.Struct, enums enums.EnumTable) []SQLField {
 	var out []SQLField
 	for i := 0; i < type_.NumFields(); i++ {
 		field := type_.Field(i)
@@ -68,14 +70,14 @@ func extractStructFields(type_ *types.Struct) []SQLField {
 		// for embedded structs, we flatten the fields
 		if underlyingType, isStruct := field.Type().Underlying().(*types.Struct); field.Embedded() && isStruct {
 			// extract the fields ...
-			sqlFields := extractStructFields(underlyingType)
+			sqlFields := extractStructFields(underlyingType, enums)
 			// ... and merge them to the outer struct
 			out = append(out, sqlFields...)
 			continue
 		}
 		constraint := parseForeignKeyConstraint(type_.Tag(i))
 		goFieldName := field.Name()
-		sf := SQLField{GoName: goFieldName, SQLName: sqlFieldName, Type: field.Type(), Exported: exported, onDelete: constraint}
+		sf := SQLField{GoName: goFieldName, SQLName: sqlFieldName, Type: sqltypes.NewSQLType(field.Type(), enums), Exported: exported, onDelete: constraint}
 		out = append(out, sf)
 	}
 	return out
