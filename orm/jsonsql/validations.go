@@ -102,7 +102,7 @@ func (b enumValue) Id() string { return b.enumType.Name }
 
 func (b enumValue) AddValidation(l *loader.Declarations) {
 	s := sqlFunc{declId: FunctionName(b)}
-	typeCast := `trim('"' FROM data::text)`
+	typeCast := `data#>>'{}'`
 	if b.enumType.IsInt {
 		typeCast = "data::int"
 	}
