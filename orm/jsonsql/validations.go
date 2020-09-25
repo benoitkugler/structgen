@@ -1,10 +1,10 @@
 package jsonsql
 
 import (
+	"bytes"
 	"fmt"
 	"hash/adler32"
 	"strings"
-	"time"
 
 	"github.com/benoitkugler/structgen/loader"
 )
@@ -73,17 +73,40 @@ const (
 	$f$
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
+
+	vEnum = `
+	CREATE OR REPLACE FUNCTION %s (data jsonb)
+		RETURNS boolean
+		AS $f$
+	BEGIN
+		RETURN jsonb_typeof(data) = '%s' AND %s IN %s;
+	END;
+	$f$
+	LANGUAGE 'plpgsql'
+	IMMUTABLE;`
 )
 
 func (b basic) Id() string { return string(b) }
 
 func (b basic) AddValidation(l *loader.Declarations) {
-	s := sqlFunc{declId: funcName(b)}
+	s := sqlFunc{declId: FunctionName(b)}
 	if b == Dynamic { // special case for Dynamic
-		s.content = fmt.Sprintf(vDynamic, funcName(b))
+		s.content = fmt.Sprintf(vDynamic, FunctionName(b))
 	} else {
-		s.content = fmt.Sprintf(vBasic, funcName(b), string(b))
+		s.content = fmt.Sprintf(vBasic, FunctionName(b), string(b))
 	}
+	l.Add(s)
+}
+
+func (b enumValue) Id() string { return b.enumType.Name }
+
+func (b enumValue) AddValidation(l *loader.Declarations) {
+	s := sqlFunc{declId: FunctionName(b)}
+	typeCast := `trim('"' FROM data::text)`
+	if b.enumType.IsInt {
+		typeCast = "data::int"
+	}
+	s.content = fmt.Sprintf(vEnum, FunctionName(b), string(b.basic), typeCast, b.enumType.AsTuple())
 	l.Add(s)
 }
 
@@ -119,7 +142,7 @@ func (b Array) AddValidation(l *loader.Declarations) {
 		gardNull = "IF jsonb_typeof(data) = 'null' THEN RETURN TRUE; END IF;"
 	}
 	b.elem.AddValidation(l) // recursion
-	fn, elemFuncName := funcName(b), funcName(b.elem)
+	fn, elemFuncName := FunctionName(b), FunctionName(b.elem)
 	content := fmt.Sprintf(vArray, fn, gardNull, elemFuncName, critereLength)
 	l.Add(sqlFunc{declId: fn, content: content})
 }
@@ -145,7 +168,7 @@ func (b Map) Id() string {
 
 func (b Map) AddValidation(l *loader.Declarations) {
 	b.elem.AddValidation(l) // recursion
-	fn, elemFuncName := funcName(b), funcName(b.elem)
+	fn, elemFuncName := FunctionName(b), FunctionName(b.elem)
 	content := fmt.Sprintf(vMap, fn, elemFuncName)
 	l.Add(sqlFunc{declId: fn, content: content})
 }
@@ -168,13 +191,29 @@ const vStruct = `
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
 
-func (b Struct) Id() string {
+// to work around possible hash collision,
+// we need to be able to check
+var structIdsTable = map[uint32]Struct{}
+
+func (b Struct) dump() []byte {
 	var data []byte
 	for _, f := range b.fields {
 		data = append(data, f.key...)
 		data = append(data, f.type_.Id()...)
 	}
-	return fmt.Sprintf("struct_%d_%d", adler32.Checksum(data), time.Now().Nanosecond())
+	return data
+}
+
+func (b Struct) Id() string {
+	ha := adler32.Checksum(b.dump())
+	if otherStruct, ok := structIdsTable[ha]; ok {
+		if !bytes.Equal(b.dump(), otherStruct.dump()) {
+			// we have a very unlikely collision
+			panic("collision in hash function for structs: try to re-order fields")
+		}
+	}
+	structIdsTable[ha] = b
+	return fmt.Sprintf("struct_%d", ha)
 }
 
 func (b Struct) AddValidation(l *loader.Declarations) {
@@ -182,14 +221,14 @@ func (b Struct) AddValidation(l *loader.Declarations) {
 	for _, f := range b.fields {
 		f.type_.AddValidation(l) // recursion
 		keys = append(keys, fmt.Sprintf("'%s'", f.key))
-		checks = append(checks, fmt.Sprintf("AND %s(data->'%s')", funcName(f.type_), f.key))
+		checks = append(checks, fmt.Sprintf("AND %s(data->'%s')", FunctionName(f.type_), f.key))
 	}
 	keyList := "key IN (" + strings.Join(keys, ", ") + ")"
 	if len(keys) == 0 {
 		keyList = "TRUE"
 	}
 	checkList := strings.Join(checks, "\n")
-	fn := funcName(b)
+	fn := FunctionName(b)
 	content := fmt.Sprintf(vStruct, fn, keyList, checkList)
 	l.Add(sqlFunc{declId: fn, content: content})
 }

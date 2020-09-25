@@ -175,7 +175,7 @@ func InsertMany{{ .Name}}s(tx *sql.Tx, items ...{{ .Name}}) error {
 func (item {{ .Name }}) Delete(tx DB) error {
 	_, err := tx.Exec(` + "`" + `DELETE FROM {{snake .Name}}s WHERE 
 	{{range $i, $e := .Fields.ForeignKeys }}{{if $i}} AND {{end}}
-	{{- if $e.IsNullable -}}
+	{{- if $e.Type.IsNullable -}}
 		( {{ $e.SQLName }} IS NULL OR {{ $e.SQLName }} = ${{inc $i}})
 	{{- else -}}
 		{{ $e.SQLName }} = ${{inc $i}}
@@ -278,7 +278,7 @@ func queries{{.Name}}(tx *sql.Tx, item {{.Name}}) ({{.Name}}, error) {
 	{{ else }} 
 	row := tx.QueryRow(` + "`" + `SELECT * FROM {{snake .Name}}s WHERE 
 		{{range $i, $e := .Fields.ForeignKeys }}{{if $i}} AND {{end}}
-		{{- if $e.IsNullable -}}
+		{{- if $e.Type.IsNullable -}}
 			( {{ $e.SQLName }} IS NULL OR {{ $e.SQLName }} = ${{inc $i}})
 		{{- else -}}
 			{{ $e.SQLName }} = ${{inc $i}}

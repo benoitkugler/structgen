@@ -4,6 +4,8 @@ type DataType struct {
 	DA int
 	DB [4]bool
 	DC []int
+	DD MyEnumI
+	DE MyEnumS
 }
 
 type Model struct {
@@ -14,3 +16,7 @@ type Model struct {
 	E map[string][]string
 	F DataType
 }
+
+type MyEnumI int
+
+type MyEnumS string

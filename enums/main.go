@@ -6,6 +6,7 @@ package enums
 
 import (
 	"fmt"
+	"go/types"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -27,10 +28,21 @@ func (t EnumTable) AsLookupTable() map[string]string {
 	return out
 }
 
+// Lookup return the matching enum and it's related basic type,
+// ok false if `ty` is not an enum.
+func (t EnumTable) Lookup(ty *types.Named) (EnumType, *types.Basic, bool) {
+	if enum, isEnum := t[ty.Obj().Name()]; isEnum {
+		if basic, isBasic := ty.Underlying().(*types.Basic); isBasic {
+			return enum, basic, true
+		}
+	}
+	return EnumType{}, nil, false
+}
+
 type EnumType struct {
 	Name   string
 	Values []EnumValue
-	isInt  bool
+	IsInt  bool
 }
 
 // AsTuple returns a tuple of valid values

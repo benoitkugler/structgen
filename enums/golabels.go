@@ -33,7 +33,7 @@ var (
 func (e EnumType) labels() string {
 	var out bytes.Buffer
 	tmpl := tmplDefault
-	if e.isInt {
+	if e.IsInt {
 		tmpl = tmplInt
 	}
 	if err := tmpl.Execute(&out, e); err != nil {

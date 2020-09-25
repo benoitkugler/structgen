@@ -76,16 +76,15 @@ func aggregate(pa *packages.Package, enums enumsValue) EnumTable {
 				typeName := named.Obj().Name()
 				isInt := false
 				if basic, isBasic := named.Underlying().(*types.Basic); isBasic {
-					switch basic.Kind() {
-					case types.Uint, types.Uint8, types.Uint16, types.Uint32, types.Uint64:
+					switch basic.Info() {
+					case types.IsInteger:
 						isInt = true
 					}
-
 				}
 				// restriction to previsouly fetch enums
 				if vals, isIn := enums[typeName]; isIn {
 					dt := out[typeName]
-					dt.Name, dt.isInt = typeName, isInt // needed if first lookup
+					dt.Name, dt.IsInt = typeName, isInt // needed if first lookup
 					dt.Values = append(dt.Values, EnumValue{
 						TypeName: typeName,
 						VarName:  varName,

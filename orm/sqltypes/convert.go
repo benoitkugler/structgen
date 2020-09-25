@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/benoitkugler/structgen/enums"
+	"github.com/benoitkugler/structgen/orm/jsonsql"
 	"github.com/benoitkugler/structgen/utils"
 )
 
@@ -80,38 +81,43 @@ func isNullable(typ *types.Named) types.Type {
 // Special case for serial (ID) must be handled by the caller
 // An enum table is needed to detect the types which should be an enum.
 func NewSQLType(typ types.Type, enums enums.EnumTable) SQLType {
+	var out SQLType
 	switch typ := typ.(type) {
 	case *types.Basic:
-		return SQLType{Type: newBuiltin(typ), IsNullable: false}
+		out = SQLType{Type: newBuiltin(typ), IsNullable: false}
 	case *types.Array:
-		return SQLType{Type: newTypeFromArray(typ, typ.Len()), IsNullable: false}
+		out = SQLType{Type: newTypeFromArray(typ, typ.Len()), IsNullable: false}
 	case *types.Slice:
 		// since pq lib convert nil slice to null
 		// we have to make this types nullable
 
 		// special case for []byte
 		if basic, ok := typ.Elem().(*types.Basic); ok && basic.Kind() == types.Byte {
-			return SQLType{Type: Builtin("bytea"), IsNullable: true}
+			out = SQLType{Type: Builtin("bytea"), IsNullable: true}
+		} else {
+			out = SQLType{Type: newTypeFromArray(typ, -1), IsNullable: true}
 		}
-		return SQLType{Type: newTypeFromArray(typ, -1), IsNullable: true}
 	case *types.Named:
 		if typ.Obj().Name() == "Date" {
 			// special case for Date type
-			return SQLType{Type: Builtin("date"), IsNullable: false}
+			out = SQLType{Type: Builtin("date"), IsNullable: false}
 		} else if utils.IsUnderlyingTime(typ) {
-			return SQLType{Type: Builtin("timestamp (0) with time zone"), IsNullable: true}
+			out = SQLType{Type: Builtin("timestamp (0) with time zone"), IsNullable: true}
 		} else if nullableType := isNullable(typ); nullableType != nil {
-			out := NewSQLType(nullableType, enums) // convert associated type
-			out.IsNullable = true                  // mark as nullable
-			return out
-		} else if enum, isEnum := enums[typ.Obj().Name()]; isEnum {
-			if basic, isBasic := typ.Underlying().(*types.Basic); isBasic {
-				under := newBuiltin(basic)
-				return SQLType{Type: Enum{underlying: under, EnumType: enum}}
-			}
+			out = NewSQLType(nullableType, enums) // convert associated type
+			out.IsNullable = true                 // mark as nullable
+		} else if enum, basic, isEnum := enums.Lookup(typ); isEnum {
+			under := newBuiltin(basic)
+			out = SQLType{Type: Enum{underlying: under, EnumType: enum}}
 		} else {
-			return NewSQLType(typ.Underlying(), enums)
+			out = NewSQLType(typ.Underlying(), enums)
 		}
+	default:
+		out = SQLType{Type: JSONB, IsNullable: false}
 	}
-	return SQLType{Type: JSONB, IsNullable: false}
+	if out.Type == JSONB {
+		// add the additional validation information
+		out.JSON = jsonsql.NewTypeJSON(typ, enums)
+	}
+	return out
 }

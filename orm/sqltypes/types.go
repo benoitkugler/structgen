@@ -5,17 +5,24 @@ import (
 	"fmt"
 
 	"github.com/benoitkugler/structgen/enums"
+	"github.com/benoitkugler/structgen/orm/jsonsql"
 )
 
 type SQLType struct {
 	IsNullable bool
 	Type       sqlType
+	JSON       jsonsql.TypeJSON // might be null
 }
 
 func (s SQLType) Declaration(field string) string {
 	ct := s.Type.Constraint(field)
 	if !s.IsNullable {
 		ct += " NOT NULL"
+	}
+	// add the eventual JSON validation function
+	if s.JSON != nil {
+		funcName := jsonsql.FunctionName(s.JSON)
+		ct += fmt.Sprintf(" CONSTRAINT %s_%s CHECK (%s(%s))", field, funcName, funcName, field)
 	}
 	return s.Type.string() + " " + ct
 }

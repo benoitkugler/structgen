@@ -5,6 +5,7 @@ package jsonsql
 import (
 	"go/types"
 
+	"github.com/benoitkugler/structgen/enums"
 	"github.com/benoitkugler/structgen/loader"
 	"github.com/benoitkugler/structgen/utils"
 )
@@ -25,24 +26,30 @@ type TypeJSON interface {
 	AddValidation(*loader.Declarations)
 }
 
-func funcName(t TypeJSON) string {
+// FunctionName returns the name of the validation function
+// associated with `t`
+func FunctionName(t TypeJSON) string {
 	return "structgen_validate_json_" + t.Id()
 }
 
-func NewTypeJSON(t types.Type) TypeJSON {
+func NewTypeJSON(t types.Type, enums enums.EnumTable) TypeJSON {
 	switch t := t.(type) {
 	case *types.Basic:
 		return newBasic(t)
 	case *types.Map:
-		return newMap(t)
+		return newMap(t, enums)
 	case *types.Slice:
-		return newArrayFromSlice(t)
+		return newArrayFromSlice(t, enums)
 	case *types.Array:
-		return newArrayFromArray(t)
+		return newArrayFromArray(t, enums)
 	case *types.Struct:
-		return newStruct(t)
+		return newStruct(t, enums)
 	case *types.Named:
-		return NewTypeJSON(t.Underlying())
+		if enum, basic, ok := enums.Lookup(t); ok {
+			under := newBasic(basic)
+			return enumValue{basic: under, enumType: enum}
+		}
+		return NewTypeJSON(t.Underlying(), enums)
 	default:
 		return Dynamic
 	}
@@ -58,7 +65,7 @@ type Struct struct {
 	fields []field
 }
 
-func newStruct(t *types.Struct) Struct {
+func newStruct(t *types.Struct, enums enums.EnumTable) Struct {
 	var fields []field
 	for i := 0; i < t.NumFields(); i++ {
 		f := t.Field(i)
@@ -66,7 +73,7 @@ func newStruct(t *types.Struct) Struct {
 		if !isExported {
 			continue
 		}
-		fields = append(fields, field{key: key, type_: NewTypeJSON(f.Type())})
+		fields = append(fields, field{key: key, type_: NewTypeJSON(f.Type(), enums)})
 	}
 	return Struct{fields: fields}
 }
@@ -75,8 +82,8 @@ type Map struct {
 	elem TypeJSON
 }
 
-func newMap(t *types.Map) Map {
-	return Map{elem: NewTypeJSON(t.Elem())}
+func newMap(t *types.Map, enums enums.EnumTable) Map {
+	return Map{elem: NewTypeJSON(t.Elem(), enums)}
 }
 
 // Array encode a slice or an array (homogenous)
@@ -85,12 +92,12 @@ type Array struct {
 	elem   TypeJSON
 }
 
-func newArrayFromArray(t *types.Array) Array {
-	return Array{length: t.Len(), elem: NewTypeJSON(t.Elem())}
+func newArrayFromArray(t *types.Array, enums enums.EnumTable) Array {
+	return Array{length: t.Len(), elem: NewTypeJSON(t.Elem(), enums)}
 }
 
-func newArrayFromSlice(t *types.Slice) Array {
-	return Array{length: -1, elem: NewTypeJSON(t.Elem())}
+func newArrayFromSlice(t *types.Slice, enums enums.EnumTable) Array {
+	return Array{length: -1, elem: NewTypeJSON(t.Elem(), enums)}
 }
 
 type basic string
@@ -106,4 +113,9 @@ func newBasic(t *types.Basic) basic {
 	default:
 		return Dynamic
 	}
+}
+
+type enumValue struct {
+	basic
+	enumType enums.EnumType
 }

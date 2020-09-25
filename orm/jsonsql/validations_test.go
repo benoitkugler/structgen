@@ -6,20 +6,25 @@ import (
 	"os"
 	"testing"
 
+	"github.com/benoitkugler/structgen/enums"
 	"github.com/benoitkugler/structgen/loader"
 )
 
 func TestValidations(t *testing.T) {
-	// fn := "test/models.go"
-	fn := "../../../intendance/server/models/models.go"
+	fn := "test/models.go"
+	// fn := "../../../intendance/server/models/models.go"
 	pkg, err := loader.LoadSource(fn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	en, err := enums.FetchEnums(pkg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	l := loader.NewDeclarations()
 	for _, name := range pkg.Types.Scope().Names() {
 		if ty, ok := pkg.Types.Scope().Lookup(name).(*types.TypeName); ok {
-			jsonT := NewTypeJSON(ty.Type())
+			jsonT := NewTypeJSON(ty.Type(), en)
 			jsonT.AddValidation(l)
 		}
 	}

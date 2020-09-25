@@ -77,7 +77,8 @@ func extractStructFields(type_ *types.Struct, enums enums.EnumTable) []SQLField 
 		}
 		constraint := parseForeignKeyConstraint(type_.Tag(i))
 		goFieldName := field.Name()
-		sf := SQLField{GoName: goFieldName, SQLName: sqlFieldName, Type: sqltypes.NewSQLType(field.Type(), enums), Exported: exported, onDelete: constraint}
+		sf := SQLField{GoName: goFieldName, SQLName: sqlFieldName, Type: sqltypes.NewSQLType(field.Type(), enums),
+			Exported: exported, onDelete: constraint}
 		out = append(out, sf)
 	}
 	return out
