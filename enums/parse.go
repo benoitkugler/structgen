@@ -76,8 +76,8 @@ func aggregate(pa *packages.Package, enums enumsValue) EnumTable {
 				typeName := named.Obj().Name()
 				isInt := false
 				if basic, isBasic := named.Underlying().(*types.Basic); isBasic {
-					switch basic.Info() {
-					case types.IsInteger:
+					switch basic.Kind() { // unsigned & int
+					case types.Uint, types.Uint8, types.Uint16, types.Uint32, types.Uint64:
 						isInt = true
 					}
 				}
