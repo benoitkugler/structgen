@@ -71,7 +71,7 @@ func (s SQLField) ForeignConstraint(tableGoName string) (ForeignKeyConstraint, b
 		sqlField:       s.SQLName,
 		sqlSourceTable: tableName(tableGoName),
 		sqlTargetTable: targetTable,
-		deleteAction:   s.onDelete,
+		deleteAction:   s.onDeleteConstraint(),
 	}
 	return ct, targetTable != ""
 }

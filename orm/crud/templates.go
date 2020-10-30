@@ -189,24 +189,27 @@ func (item {{ .Name }}) Delete(tx DB) error {
 
 	templateStructLinkToLookup = template.Must(template.New("").Funcs(orm.FnMap).Parse(`
 {{range .Fields.ForeignKeys }}
-// By{{ .GoName }} returns a map with '{{ .GoName }}' as keys.
-{{- if $.IsColumnUnique .SQLName }}
-func (items {{$.Name}}s) By{{ .GoName }}() map[int64]{{ $.Name }} {
-	out := make(map[int64]{{ $.Name }}, len(items))
-	for _, target := range items {
-		out[target.{{ .GoName }}] = target
-	}
-	return out
-}	
-{{ else }}
-func (items {{$.Name}}s) By{{ .GoName }}() map[int64]{{ $.Name }}s {
-	out := make(map[int64]{{ $.Name }}s)
-	for _, target := range items {
-		out[target.{{ .GoName }}] = append(out[target.{{ .GoName }}], target)
-	}
-	return out
-}	
-{{ end }}
+	{{ if .Type.IsNullable }}
+	{{ else }}
+		// By{{ .GoName }} returns a map with '{{ .GoName }}' as keys.
+		{{- if $.IsColumnUnique .SQLName }}
+		func (items {{$.Name}}s) By{{ .GoName }}() map[int64]{{ $.Name }} {
+			out := make(map[int64]{{ $.Name }}, len(items))
+			for _, target := range items {
+				out[target.{{ .GoName }}] = target
+			}
+			return out
+		}	
+		{{ else }}
+		func (items {{$.Name}}s) By{{ .GoName }}() map[int64]{{ $.Name }}s {
+			out := make(map[int64]{{ $.Name }}s)
+			for _, target := range items {
+				out[target.{{ .GoName }}] = append(out[target.{{ .GoName }}], target)
+			}
+			return out
+		}	
+		{{ end}}
+	{{ end }}
 {{end}}`))
 
 	templateSelectBy = template.Must(template.New("").Funcs(orm.FnMap).Parse(`

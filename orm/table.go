@@ -2,6 +2,7 @@ package orm
 
 import (
 	"go/types"
+	"reflect"
 
 	"github.com/benoitkugler/structgen/enums"
 	"github.com/benoitkugler/structgen/orm/sqltypes"
@@ -75,10 +76,9 @@ func extractStructFields(type_ *types.Struct, enums enums.EnumTable) []SQLField 
 			out = append(out, sqlFields...)
 			continue
 		}
-		constraint := parseForeignKeyConstraint(type_.Tag(i))
 		goFieldName := field.Name()
 		sf := SQLField{GoName: goFieldName, SQLName: sqlFieldName, Type: sqltypes.NewSQLType(field.Type(), enums),
-			Exported: exported, onDelete: constraint}
+			Exported: exported, goTag: reflect.StructTag(type_.Tag(i))}
 		out = append(out, sf)
 	}
 	return out

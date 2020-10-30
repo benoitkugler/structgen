@@ -13,7 +13,7 @@ type SQLField struct {
 	SQLName  string
 	Type     sqltypes.SQLType
 	Exported bool
-	onDelete string
+	goTag    reflect.StructTag // struct field tag
 }
 
 func (s SQLField) IsPrimary() bool {
@@ -21,8 +21,11 @@ func (s SQLField) IsPrimary() bool {
 }
 
 // ForeignKey returns the name to the table this field references
-// or ""
+// or "". A sql_foreign_key tag has the precedance over the name of the field.
 func (s SQLField) ForeignKey() string {
+	if sqlTableNoS := s.goTag.Get("sql_foreign_key"); sqlTableNoS != "" {
+		return sqlTableNoS + "s"
+	}
 	if !s.IsPrimary() && strings.HasPrefix(s.GoName, "Id") {
 		goTableName := strings.TrimPrefix(s.GoName, "Id")
 		return tableName(goTableName)
@@ -41,9 +44,8 @@ func (s SQLField) CreateStmt() string {
 	return fmt.Sprintf("%s %s", s.SQLName, typeDecl)
 }
 
-func parseForeignKeyConstraint(fullTag string) string {
-	sTag := reflect.StructTag(fullTag)
-	return sTag.Get("sql_foreign")
+func (s SQLField) onDeleteConstraint() string {
+	return s.goTag.Get("sql_on_delete")
 }
 
 type fields []SQLField
