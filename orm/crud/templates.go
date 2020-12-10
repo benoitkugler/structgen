@@ -243,9 +243,12 @@ func Delete{{ $.Name }}sBy{{ .GoName }}s(tx DB, {{ varname .GoName }}s ...int64)
 	return ScanIds(rows)
 }	
 {{ else }}
-func Delete{{ $.Name }}sBy{{ .GoName }}s(tx DB, {{ varname .GoName }}s ...int64) error {
-	_, err := tx.Exec("DELETE FROM {{ snake $.Name }}s WHERE {{ .SQLName }} = ANY($1)", pq.Int64Array({{ varname .GoName}}s))
-	return err
+func Delete{{ $.Name }}sBy{{ .GoName }}s(tx DB, {{ varname .GoName }}s ...int64) ({{ $.Name }}s, error)  {
+	rows, err := tx.Query("DELETE FROM {{ snake $.Name }}s WHERE {{ .SQLName }} = ANY($1) RETURNING *", pq.Int64Array({{ varname .GoName}}s))
+	if err != nil {
+		return nil, err
+	}
+	return Scan{{ $.Name }}s(rows)
 }	
 {{ end }}
 

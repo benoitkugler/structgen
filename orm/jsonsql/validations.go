@@ -116,8 +116,9 @@ const vArray = `
 		AS $f$
 	BEGIN
 		%s
-		RETURN jsonb_typeof(data) = 'array'
-			AND (SELECT bool_and( %s(value) )  FROM jsonb_array_elements(data)) 
+		IF jsonb_typeof(data) != 'array' THEN RETURN FALSE; END IF;
+		%s 
+		RETURN (SELECT bool_and( %s(value) )  FROM jsonb_array_elements(data)) 
 			%s;
 	END;
 	$f$
@@ -133,9 +134,11 @@ func (b Array) Id() string {
 }
 
 func (b Array) AddValidation(l *loader.Declarations) {
-	critereLength := ""
+	critereLength, acceptZeroLength := "", ""
 	if b.length >= 0 {
 		critereLength = fmt.Sprintf("AND jsonb_array_length(data) = %d", b.length)
+	} else {
+		acceptZeroLength = "IF jsonb_array_length(data) = 0 THEN RETURN TRUE; END IF;"
 	}
 	gardNull := ""
 	if b.length == -1 { // accepts null
@@ -143,7 +146,7 @@ func (b Array) AddValidation(l *loader.Declarations) {
 	}
 	b.elem.AddValidation(l) // recursion
 	fn, elemFuncName := FunctionName(b), FunctionName(b.elem)
-	content := fmt.Sprintf(vArray, fn, gardNull, elemFuncName, critereLength)
+	content := fmt.Sprintf(vArray, fn, gardNull, acceptZeroLength, elemFuncName, critereLength)
 	l.Add(sqlFunc{declId: fn, content: content})
 }
 
