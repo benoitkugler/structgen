@@ -37,6 +37,15 @@ func Select{{ .Name }}(tx DB, id int64) ({{ .Name }}, error) {
 	return Scan{{ .Name }}(row)
 }
 
+// Select{{ .Name }}s returns the entry matching the given ids.
+func Select{{ .Name }}s(tx DB, ids ...int64) ({{ .Name }}s, error) {
+	rows, err := tx.Query("SELECT * FROM {{snake .Name}}s WHERE id = ANY($1)", pq.Int64Array(ids))
+	if err != nil {
+		return nil, err
+	}
+	return Scan{{ .Name }}s(rows)
+}
+
 type {{.Name}}s map[int64]{{.Name}}
 
 func (m {{.Name}}s) Ids() Ids {
