@@ -38,6 +38,8 @@ func GetFieldName(field *types.Var, fullTag, tagId string) (string, bool) {
 	return tag, field.Exported()
 }
 
+// IsUnderlyingTime returns `true` is the underlying type
+// of `typ` is time.Time
 func IsUnderlyingTime(typ types.Type) bool {
 	return typ.Underlying().String() == timeString
 }

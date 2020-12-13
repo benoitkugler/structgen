@@ -1,4 +1,4 @@
-// Analyse types to generated compile-time
+// Analyse types to generate compile-time
 // json validation functions for PSQL
 package jsonsql
 
@@ -43,6 +43,10 @@ func NewTypeJSON(t types.Type, enums enums.EnumTable) TypeJSON {
 	case *types.Array:
 		return newArrayFromArray(t, enums)
 	case *types.Struct:
+		if utils.IsUnderlyingTime(t) {
+			// special case for time, JSONed as a string
+			return String
+		}
 		return newStruct(t, enums)
 	case *types.Named:
 		if enum, basic, ok := enums.Lookup(t); ok {
