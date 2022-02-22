@@ -1,19 +1,19 @@
 package enums
 
-type Test uint
+type TestEnumInt uint
 
 const (
-	A Test = iota // sdsd
-	B             // sdsd
-	C             // sdsd
-	D             // sdsd
+	A TestEnumInt = iota // sdsd
+	B                    // sdsdB
+	C                    // sdsdC
+	D                    // sdsdD
 )
 
-type TestS string
+type TestEnumString string
 
 const (
-	SA TestS = "dsdsd" // sdsd
-	SB TestS = "dsdsd" // sdsd
-	SC TestS = "dsdsd" // sdsd
-	SD TestS = "dsdsd" // sdsd
+	SA TestEnumString = "va" // sdsdA
+	SB TestEnumString = "vb" // sdsdB
+	SC TestEnumString = "vc" // sdsdC
+	SD TestEnumString = "vd" // sdsdD
 )

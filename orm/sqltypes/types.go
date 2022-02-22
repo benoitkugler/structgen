@@ -40,7 +40,7 @@ func (b Builtin) string() string         { return string(b) }
 
 type Enum struct {
 	underlying Builtin
-	enums.EnumType
+	enums.Type
 }
 
 func (e Enum) Constraint(field string) string {
@@ -60,6 +60,7 @@ func (a Array) Constraint(field string) string {
 	}
 	return fmt.Sprintf(" CHECK (array_length(%s, 1) = %d)", field, a.length)
 }
+
 func (a Array) string() string {
 	return fmt.Sprintf("%s[]", a.element.string())
 }

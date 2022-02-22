@@ -108,7 +108,7 @@ func NewSQLType(typ types.Type, enums enums.EnumTable) SQLType {
 			out.IsNullable = true                 // mark as nullable
 		} else if enum, basic, isEnum := enums.Lookup(typ); isEnum {
 			under := newBuiltin(basic)
-			out = SQLType{Type: Enum{underlying: under, EnumType: enum}}
+			out = SQLType{Type: Enum{underlying: under, Type: enum}}
 		} else {
 			out = NewSQLType(typ.Underlying(), enums)
 		}

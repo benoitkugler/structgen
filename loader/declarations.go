@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"go/types"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/benoitkugler/structgen/utils"
@@ -13,9 +14,20 @@ import (
 )
 
 type Handler interface {
-	WriteHeader(w io.Writer) error
+	// HandleType process the given type, creating a Declaration
+	// and storing it (if needed) into `topLevelDecl`.
 	HandleType(topLevelDecl *Declarations, typ types.Type)
+
+	// HandleComment process special comments used to specify cnntext-dependent
+	// information.
 	HandleComment(topLevelDecl *Declarations, comment Comment) error
+
+	// WriteHeader writes the start of the generated content.
+	// After being called, all the stored declarations are rendered
+	// and added to the file, then WriteFooter is called.
+	WriteHeader(w io.Writer) error
+
+	// WriteFooter writes the remaining generated instructions
 	WriteFooter(w io.Writer) error
 }
 
@@ -28,21 +40,19 @@ type Declaration interface {
 // to write.
 type Declarations struct {
 	list []Declaration
-	keys map[string]struct{}
+	keys map[string]bool
 }
 
 func NewDeclarations() *Declarations {
-	return &Declarations{keys: map[string]struct{}{}}
+	return &Declarations{keys: map[string]bool{}}
 }
 
-func (ds Declarations) List() []Declaration {
-	return ds.list
-}
+func (ds Declarations) List() []Declaration { return ds.list }
 
 func (ds *Declarations) Add(d Declaration) {
-	if _, alreadyHere := ds.keys[d.Id()]; !alreadyHere {
+	if alreadyHere := ds.keys[d.Id()]; !alreadyHere {
 		ds.list = append(ds.list, d)
-		ds.keys[d.Id()] = struct{}{}
+		ds.keys[d.Id()] = true
 	}
 }
 
@@ -60,14 +70,20 @@ func (ds Declarations) Render(out io.Writer) error {
 	return err
 }
 
+// Comment is a special comment with the following syntax // <tag>:<content>
 type Comment struct {
-	TypeName string
-	Tag      string
-	Content  string
+	TypeName string // the type where the comment was found
+	Tag      string // the first part of the comment
+	Content  string // the actual content
 }
 
 func LoadSource(sourceFile string) (*packages.Package, error) {
-	cfg := &packages.Config{Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedImports | packages.NeedDeps}
+	dir := filepath.Dir(sourceFile)
+	cfg := &packages.Config{
+		Dir: dir,
+		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax |
+			packages.NeedTypes | packages.NeedImports | packages.NeedDeps,
+	}
 	pkgs, err := packages.Load(cfg, "file="+sourceFile)
 	if err != nil {
 		return nil, err
@@ -75,9 +91,13 @@ func LoadSource(sourceFile string) (*packages.Package, error) {
 	if len(pkgs) != 1 {
 		return nil, fmt.Errorf("only one package expected, got %d", len(pkgs))
 	}
+	if len(pkgs[0].Errors) != 0 {
+		return nil, fmt.Errorf("errors during package loading:\n%v", pkgs[0].Errors)
+	}
 	return pkgs[0], nil
 }
 
+// WalkFile uses the package information to analyse the defined types.
 func WalkFile(absPathOrigin string, pkg *packages.Package, handler Handler) (*Declarations, error) {
 	scope := pkg.Types.Scope()
 	fset := pkg.Fset

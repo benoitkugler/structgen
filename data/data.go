@@ -8,8 +8,10 @@ import (
 	"github.com/benoitkugler/structgen/loader"
 )
 
-var i DataFunction
-var _ loader.Declaration = i
+var (
+	i DataFunction
+	_ loader.Declaration = i
+)
 
 // DataFunction describe a function
 // able to generate random data.
@@ -71,6 +73,7 @@ func fnInt(intType string) string {
 		return %s(rand.Intn(1000000))
 	}`, intType, intType, intType)
 }
+
 func fnFloat64() string {
 	return `
 	func randfloat64() float64 {
@@ -294,7 +297,7 @@ func (f FnNamed) Render() string {
 type FnEnum struct {
 	TargetPackage string
 	Type_         *types.Named
-	Underlying    enums.EnumType
+	Underlying    enums.Type
 }
 
 func (f FnEnum) Id() string {

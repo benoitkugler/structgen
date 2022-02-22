@@ -14,7 +14,7 @@ import (
 	"github.com/benoitkugler/structgen/orm/composites"
 	"github.com/benoitkugler/structgen/orm/creation"
 	"github.com/benoitkugler/structgen/orm/crud"
-	"github.com/benoitkugler/structgen/tstypes"
+	tstypes "github.com/benoitkugler/structgen/ts-types"
 )
 
 type mode struct {

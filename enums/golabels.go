@@ -30,7 +30,7 @@ var (
 
 // labels returns the code for
 // mapping variable
-func (e EnumType) labels() string {
+func (e Type) labels() string {
 	var out bytes.Buffer
 	tmpl := tmplDefault
 	if e.IsInt {

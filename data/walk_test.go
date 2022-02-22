@@ -10,7 +10,7 @@ import (
 )
 
 func TestMain(t *testing.T) {
-	fn := "../../goACVE/core/rawdata/rawdata.go"
+	fn := "../../goACVE/server/core/rawdata/models.go"
 	// fn := "../../intendance/server/models/models.go"
 	pkg, err := loader.LoadSource(fn)
 	if err != nil {

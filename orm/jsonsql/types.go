@@ -121,5 +121,5 @@ func newBasic(t *types.Basic) basic {
 
 type enumValue struct {
 	basic
-	enumType enums.EnumType
+	enumType enums.Type
 }

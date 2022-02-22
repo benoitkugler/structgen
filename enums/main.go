@@ -13,7 +13,7 @@ import (
 )
 
 // EnumTable map type name to their values
-type EnumTable map[string]EnumType
+type EnumTable map[string]Type
 
 // AsLookupTable return a map with key TypeName.VarName
 // and their resolved values.
@@ -30,16 +30,17 @@ func (t EnumTable) AsLookupTable() map[string]string {
 
 // Lookup return the matching enum and it's related basic type,
 // ok false if `ty` is not an enum.
-func (t EnumTable) Lookup(ty *types.Named) (EnumType, *types.Basic, bool) {
+func (t EnumTable) Lookup(ty *types.Named) (Type, *types.Basic, bool) {
 	if enum, isEnum := t[ty.Obj().Name()]; isEnum {
 		if basic, isBasic := ty.Underlying().(*types.Basic); isBasic {
 			return enum, basic, true
 		}
 	}
-	return EnumType{}, nil, false
+	return Type{}, nil, false
 }
 
-type EnumType struct {
+// Type describes an enumeration
+type Type struct {
 	Name   string
 	Values []EnumValue
 	IsInt  bool
@@ -48,7 +49,7 @@ type EnumType struct {
 // AsTuple returns a tuple of valid values
 // compatible with SQL syntax.
 // Ex: ('red', 'blue', 'green')
-func (e EnumType) AsTuple() string {
+func (e Type) AsTuple() string {
 	chunks := make([]string, len(e.Values))
 	for i, val := range e.Values {
 		chunks[i] = val.Value
@@ -59,7 +60,7 @@ func (e EnumType) AsTuple() string {
 
 // AsArray returns the code for a Go array
 // containing all values.
-func (e EnumType) AsArray() string {
+func (e Type) AsArray() string {
 	chunks := make([]string, len(e.Values))
 	for i, val := range e.Values {
 		chunks[i] = val.VarName

@@ -10,11 +10,12 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+// EnumValue decribe the value of one item in an enumeration type.
 type EnumValue struct {
-	TypeName string
-	VarName  string
-	Value    string
-	Label    string
+	TypeName string // the "parent" type
+	VarName  string // the variable name of the item
+	Value    string // the value, as Go Code, like 1 or "abc"
+	Label    string // how to display the value
 }
 
 type enumLabels map[string]string // varName -> text
