@@ -17,22 +17,15 @@ func (n named) json() string {
 func (b basic) json() string {
 	switch b {
 	case dartString, dartBool, dartFloat, dartInt, dartAny:
-		return fmt.Sprintf(`%s %sFromJson(dynamic json) {
-			return json as %s;
-		}
-
-		dynamic %sToJson(%s item) {
-			return item;
-		}
+		return fmt.Sprintf(`%s %sFromJson(dynamic json) => json as %s;
+		
+		dynamic %sToJson(%s item) => item;
+		
 		`, b, b, b, b, b)
 	case dartTime:
-		return `DateTime DateTimeFromJson(dynamic json) {
-			return DateTime.parse(json as String);
-		}
+		return `DateTime DateTimeFromJson(dynamic json) => DateTime.parse(json as String);
 
-		dynamic DateTimeToJson(DateTime dt) {
-			return dt.toString();
-		}
+		dynamic DateTimeToJson(DateTime dt) => dt.toString();
 		`
 	default:
 		panic("exhaustive switch")
@@ -44,13 +37,9 @@ func (en enum) json() string {
 	if en.enum.IsInt {
 		valueType = "int"
 	}
-	return fmt.Sprintf(`%s %sFromJson(dynamic json) {
-		return __%s.fromValue(json as %s);
-	}
+	return fmt.Sprintf(`%s %sFromJson(dynamic json) => __%s.fromValue(json as %s);
 	
-	dynamic %sToJson(%s item) {
-		return item.toValue();
-	}
+	dynamic %sToJson(%s item) => item.toValue();
 	
 	`, en.enum.Name, en.enum.Name, en.enum.Name, valueType,
 		en.enum.Name, en.enum.Name,
@@ -89,7 +78,8 @@ func (cl class) json() string {
 		fieldsTo = append(fieldsTo, fmt.Sprintf("%q : %sToJson(item.%s)", f.name, f.type_.functionId(), f.name))
 	}
 	return fmt.Sprintf(`
-	%s %sFromJson(JSON json) {
+	%s %sFromJson(dynamic json_) {
+		final json = (json_ as JSON);
 		return %s(
 			%s
 		);

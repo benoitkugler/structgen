@@ -89,6 +89,8 @@ func (d handler) analyseType(typ types.Type) tsType {
 		return TsTime
 	}
 
+	// TODO: handle interface, by generalizing dart approach
+
 	if isNamed {
 		finalName := named.Obj().Name()
 		origin := typ.String()

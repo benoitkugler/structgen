@@ -933,3 +933,10 @@ export interface User {
   is_admin: Bool;
   modules: Modules;
 }
+
+interface Itf {
+    Kind: number;
+    Data: User | Modules
+} 
+
+ 
