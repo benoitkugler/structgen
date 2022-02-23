@@ -9,7 +9,7 @@ import (
 )
 
 func TestGraph(t *testing.T) {
-	fn := "../../../goACVE/core/rawdata/models.go"
+	fn := "../../../goACVE/server/core/rawdata/models.go"
 	pkg, err := loader.LoadSource(fn)
 	if err != nil {
 		t.Fatal(err)
@@ -23,7 +23,7 @@ func TestGraph(t *testing.T) {
 	tables := handler.tables
 
 	g := newGraph(tables)
-	err = g.Render(handler.OriginPackageName, os.Stdout)
+	err = g.render(handler.OriginPackageName, os.Stdout)
 	if err != nil {
 		t.Fatal(err)
 	}

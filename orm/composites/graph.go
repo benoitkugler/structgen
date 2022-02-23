@@ -200,7 +200,7 @@ func (g graph) extractPaths() [][]string {
 	return out
 }
 
-func (g graph) Render(origin string, out io.Writer) error {
+func (g graph) render(origin string, out io.Writer) error {
 	paths := g.extractPaths()
 	for _, path := range paths {
 		args := compositeTable{Origin: origin}

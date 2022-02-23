@@ -21,9 +21,9 @@ type TypeJSON interface {
 	// Id is used to construct the function name
 	Id() string
 
-	// AddValidation write the needed declaration for the
+	// Validation returns the needed declaration for the
 	// function name
-	AddValidation(*loader.Declarations)
+	Validations() []loader.Declaration
 }
 
 // FunctionName returns the name of the validation function

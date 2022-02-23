@@ -79,7 +79,7 @@ func main() {
 		case "ts":
 			typeHandler = tstypes.NewHandler(en)
 		case "rand":
-			typeHandler = data.Handler{PackageName: packageName, EnumsTable: en}
+			typeHandler = data.NewHandler(packageName, en)
 		case "sql":
 			typeHandler = crud.NewHandler(packageName, false)
 		case "sql_test":
@@ -104,15 +104,8 @@ func main() {
 			log.Fatal(err)
 		}
 
-		if err := typeHandler.WriteHeader(f); err != nil {
-			log.Fatal(err)
-		}
-
-		if err := decls.Render(f); err != nil {
-			log.Fatal(err)
-		}
-
-		if err := typeHandler.WriteFooter(f); err != nil {
+		err = decls.Generate(f, typeHandler)
+		if err != nil {
 			log.Fatal(err)
 		}
 

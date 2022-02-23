@@ -29,10 +29,9 @@ func TestSQL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := decls.Render(os.Stdout); err != nil {
-		t.Fatal(err)
-	}
-	if err := handler.WriteFooter(os.Stdout); err != nil {
+
+	err = decls.Generate(os.Stdout, handler)
+	if err != nil {
 		t.Fatal(err)
 	}
 }

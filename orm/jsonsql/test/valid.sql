@@ -22,12 +22,14 @@ CREATE OR REPLACE FUNCTION structgen_validate_json_array_4_boolean (data jsonb)
     RETURNS boolean
     AS $f$
 BEGIN
-    RETURN jsonb_typeof(data) = 'array'
-        AND (
-            SELECT
-                bool_and(structgen_validate_json_boolean (value))
-            FROM
-                jsonb_array_elements(data))
+    IF jsonb_typeof(data) != 'array' THEN
+        RETURN FALSE;
+    END IF;
+    RETURN (
+        SELECT
+            bool_and(structgen_validate_json_boolean (value))
+        FROM
+            jsonb_array_elements(data))
         AND jsonb_array_length(data) = 4;
 END;
 $f$
@@ -41,12 +43,17 @@ BEGIN
     IF jsonb_typeof(data) = 'null' THEN
         RETURN TRUE;
     END IF;
-    RETURN jsonb_typeof(data) = 'array'
-        AND (
-            SELECT
-                bool_and(structgen_validate_json_number (value))
-            FROM
-                jsonb_array_elements(data));
+    IF jsonb_typeof(data) != 'array' THEN
+        RETURN FALSE;
+    END IF;
+    IF jsonb_array_length(data) = 0 THEN
+        RETURN TRUE;
+    END IF;
+    RETURN (
+        SELECT
+            bool_and(structgen_validate_json_number (value))
+        FROM
+            jsonb_array_elements(data));
 END;
 $f$
 LANGUAGE 'plpgsql'
@@ -57,7 +64,7 @@ CREATE OR REPLACE FUNCTION structgen_validate_json_MyEnumI (data jsonb)
     AS $f$
 BEGIN
     RETURN jsonb_typeof(data) = 'number'
-        AND data::int IN (0, 1, 2);
+        AND data #>> '{}' IN (0, 1, 2);
 END;
 $f$
 LANGUAGE 'plpgsql'
@@ -68,7 +75,7 @@ CREATE OR REPLACE FUNCTION structgen_validate_json_MyEnumS (data jsonb)
     AS $f$
 BEGIN
     RETURN jsonb_typeof(data) = 'string'
-        AND data::text IN ('456', '45');
+        AND data #>> '{}' IN ('456', '45');
 END;
 $f$
 LANGUAGE 'plpgsql'
@@ -113,12 +120,17 @@ BEGIN
     IF jsonb_typeof(data) = 'null' THEN
         RETURN TRUE;
     END IF;
-    RETURN jsonb_typeof(data) = 'array'
-        AND (
-            SELECT
-                bool_and(structgen_validate_json_string (value))
-            FROM
-                jsonb_array_elements(data));
+    IF jsonb_typeof(data) != 'array' THEN
+        RETURN FALSE;
+    END IF;
+    IF jsonb_array_length(data) = 0 THEN
+        RETURN TRUE;
+    END IF;
+    RETURN (
+        SELECT
+            bool_and(structgen_validate_json_string (value))
+        FROM
+            jsonb_array_elements(data));
 END;
 $f$
 LANGUAGE 'plpgsql'

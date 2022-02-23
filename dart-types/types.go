@@ -89,3 +89,10 @@ func (e enum) render() string {
 type named string
 
 func (n named) render() string { return string(n) }
+
+// interface type, handled as union type
+type union string
+
+func (u union) render() string {
+	return fmt.Sprintf(`abstract class %s {}`, u)
+}

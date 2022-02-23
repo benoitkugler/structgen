@@ -8,18 +8,15 @@ import (
 	"github.com/benoitkugler/structgen/loader"
 )
 
-var (
-	i DataFunction
-	_ loader.Declaration = i
-)
+var _ loader.Type = dataFunction(nil)
 
-// DataFunction describe a function
+// dataFunction describe a function
 // able to generate random data.
-type DataFunction interface {
+type dataFunction interface {
 	// Identify the type generated
 	Id() string
 	Type() types.Type
-	Render() string
+	Render() []loader.Declaration
 }
 
 type FnBasic struct {
@@ -37,26 +34,27 @@ func (f FnBasic) Type() types.Type {
 	return f.type_
 }
 
-func (f FnBasic) Render() string {
+func (f FnBasic) Render() []loader.Declaration {
+	var code string
 	switch f.type_.Kind() {
 	case types.Bool:
-		return fnBool()
+		code = fnBool()
 	case types.Int:
-		return fnInt("int")
+		code = fnInt("int")
 	case types.Int64:
-		return fnInt("int64")
+		code = fnInt("int64")
 	case types.Uint8:
-		return fnInt("uint8")
+		code = fnInt("uint8")
 	case types.Int8:
-		return fnInt("int8")
+		code = fnInt("int8")
 	case types.Float64:
-		return fnFloat64()
+		code = fnFloat64()
 	case types.String:
-		return fnString()
+		code = fnString()
 	default:
-		fmt.Println(f.type_)
 		panic(fmt.Sprintf("basic type %v not supported", f.type_))
 	}
+	return []loader.Declaration{{Id: f.Id(), Content: code}}
 }
 
 func fnBool() string {
@@ -107,12 +105,12 @@ func (f FnTime) Type() types.Type {
 	return types.NewNamed(types.NewTypeName(0, nil, "Time", nil), &types.Struct{}, nil)
 }
 
-func (f FnTime) Render() string {
-	return `
+func (f FnTime) Render() []loader.Declaration {
+	return []loader.Declaration{{Id: f.Id(), Content: `
 	func randtTime() time.Time {
 		return time.Unix(int64(rand.Int31()), 5)
 	}
-	`
+	`}}
 }
 
 func typeName(targetPackage string, type_ types.Type) string {
@@ -130,7 +128,7 @@ func typeName(targetPackage string, type_ types.Type) string {
 type FnArray struct {
 	TargetPackage string
 	Length        int64
-	Elem          DataFunction
+	Elem          dataFunction
 }
 
 func (f FnArray) Id() string {
@@ -141,21 +139,28 @@ func (f FnArray) Type() types.Type {
 	return types.NewArray(f.Elem.Type(), f.Length)
 }
 
-func (f FnArray) Render() string {
+func (f FnArray) Render() []loader.Declaration {
+	decls := f.Elem.Render() // recurse for deps
+
 	elemString := typeName(f.TargetPackage, f.Elem.Type())
-	return fmt.Sprintf(`
+	decl := loader.Declaration{
+		Id: f.Id(), Content: fmt.Sprintf(`
 	func rand%s() [%d]%s {
 		var out [%d]%s
 		for i := range out {
 			out[i] = rand%s()
 		}
 		return out
-	}`, f.Id(), f.Length, elemString, f.Length, elemString, f.Elem.Id())
+	}`, f.Id(), f.Length, elemString, f.Length, elemString, f.Elem.Id()),
+	}
+
+	decls = append(decls, decl)
+	return decls
 }
 
 type FnSlice struct {
 	TargetPackage string
-	Elem          DataFunction
+	Elem          dataFunction
 }
 
 func (f FnSlice) Id() string {
@@ -166,9 +171,12 @@ func (f FnSlice) Type() types.Type {
 	return types.NewSlice(f.Elem.Type())
 }
 
-func (f FnSlice) Render() string {
+func (f FnSlice) Render() []loader.Declaration {
+	decls := f.Elem.Render() // recurse for deps
+
 	elemString := typeName(f.TargetPackage, f.Elem.Type())
-	return fmt.Sprintf(`
+	decl := loader.Declaration{
+		Id: f.Id(), Content: fmt.Sprintf(`
 	func rand%s() []%s {
 		l := rand.Intn(10)
 		out := make([]%s, l)
@@ -176,13 +184,17 @@ func (f FnSlice) Render() string {
 			out[i] = rand%s()
 		}
 		return out
-	}`, f.Id(), elemString, elemString, f.Elem.Id())
+	}`, f.Id(), elemString, elemString, f.Elem.Id()),
+	}
+
+	decls = append(decls, decl)
+	return decls
 }
 
 type FnMap struct {
 	TargetPackage string
-	Key           DataFunction
-	Elem          DataFunction
+	Key           dataFunction
+	Elem          dataFunction
 }
 
 func (f FnMap) Id() string {
@@ -193,10 +205,14 @@ func (f FnMap) Type() types.Type {
 	return types.NewMap(f.Key.Type(), f.Elem.Type())
 }
 
-func (f FnMap) Render() string {
+func (f FnMap) Render() []loader.Declaration {
+	decls := f.Key.Render() // recurse for deps
+	decls = append(decls, f.Elem.Render()...)
+
 	keyString := typeName(f.TargetPackage, f.Key.Type())
 	elemString := typeName(f.TargetPackage, f.Elem.Type())
-	return fmt.Sprintf(`
+	decl := loader.Declaration{
+		Id: f.Id(), Content: fmt.Sprintf(`
 	func rand%s() map[%s]%s {
 		l := rand.Intn(10)
 		out := make(map[%s]%s, l)
@@ -204,13 +220,18 @@ func (f FnMap) Render() string {
 			out[rand%s()] = rand%s()
 		}
 		return out
-	}`, f.Id(), keyString, elemString, keyString, elemString, f.Key.Id(), f.Elem.Id())
+	}`, f.Id(), keyString, elemString, keyString, elemString, f.Key.Id(), f.Elem.Id()),
+	}
+
+	decls = append(decls, decl)
+	return decls
 }
 
-// structField stores one propery of an object
+// structField stores one property of an object
 type structField struct {
-	Name string
-	Id   string
+	Name  string
+	Id    string
+	type_ dataFunction
 }
 
 // FnStruct generate a named random struct
@@ -233,24 +254,29 @@ func (f FnStruct) Type() types.Type {
 	return f.Type_
 }
 
-func (f FnStruct) Render() string {
+func (f FnStruct) Render() (decls []loader.Declaration) {
 	fieldsCode := ""
 	for _, field := range f.Fields {
+		decls = append(decls, field.type_.Render()...)
 		fieldsCode += fmt.Sprintf("\t%s: rand%s(),\n", field.Name, field.Id)
 	}
 	typeN := typeName(f.TargetPackage, f.Type_)
-	fCode := fmt.Sprintf(`
+	fCode := loader.Declaration{
+		Id: f.Id(), Content: fmt.Sprintf(`
 	func rand%s() %s {
 		return %s{
 			%s
 		}
-	}`, f.Id(), typeN, typeN, fieldsCode)
-	return fCode
+	}`, f.Id(), typeN, typeN, fieldsCode),
+	}
+
+	decls = append(decls, fCode)
+	return decls
 }
 
 type FnPointer struct {
 	TargetPackage string
-	Elem          DataFunction
+	Elem          dataFunction
 }
 
 func (f FnPointer) Id() string {
@@ -261,19 +287,25 @@ func (f FnPointer) Type() types.Type {
 	return types.NewPointer(f.Elem.Type())
 }
 
-func (f FnPointer) Render() string {
+func (f FnPointer) Render() []loader.Declaration {
+	decls := f.Elem.Render()
 	elemString := typeName(f.TargetPackage, f.Elem.Type())
-	return fmt.Sprintf(`
+	decl := loader.Declaration{
+		Id: f.Id(), Content: fmt.Sprintf(`
 	func rand%s() *%s {
 		data := rand%s()
 		return &data
-	}`, f.Id(), elemString, f.Elem.Id())
+	}`, f.Id(), elemString, f.Elem.Id()),
+	}
+
+	decls = append(decls, decl)
+	return decls
 }
 
 type FnNamed struct {
 	TargetPackage string
 	Type_         *types.Named
-	Underlying    DataFunction
+	Underlying    dataFunction
 }
 
 func (f FnNamed) Id() string {
@@ -284,12 +316,19 @@ func (f FnNamed) Type() types.Type {
 	return f.Type_
 }
 
-func (f FnNamed) Render() string {
+func (f FnNamed) Render() []loader.Declaration {
+	decls := f.Underlying.Render()
+
 	tn := typeName(f.TargetPackage, f.Type_)
-	return fmt.Sprintf(`
+	decl := loader.Declaration{
+		Id: f.Id(), Content: fmt.Sprintf(`
 	func rand%s() %s {
 		return %s(rand%s())
-	}`, f.Id(), tn, tn, f.Underlying.Id())
+	}`, f.Id(), tn, tn, f.Underlying.Id()),
+	}
+
+	decls = append(decls, decl)
+	return decls
 }
 
 // FnEnum is also a NamedType but has it's own rand()
@@ -308,12 +347,14 @@ func (f FnEnum) Type() types.Type {
 	return f.Type_
 }
 
-func (f FnEnum) Render() string {
+func (f FnEnum) Render() []loader.Declaration {
 	tn := typeName(f.TargetPackage, f.Type_)
-	return fmt.Sprintf(`
+	return []loader.Declaration{{
+		Id: f.Id(), Content: fmt.Sprintf(`
 	func rand%s() %s {
 		choix := %s
 		i := rand.Intn(len(choix))
 		return choix[i]
-	}`, f.Id(), tn, f.Underlying.AsArray())
+	}`, f.Id(), tn, f.Underlying.AsArray()),
+	}}
 }

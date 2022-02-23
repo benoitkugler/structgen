@@ -13,10 +13,11 @@ import (
 
 	"github.com/benoitkugler/structgen/enums"
 	"github.com/benoitkugler/structgen/loader"
+	"github.com/benoitkugler/structgen/utils"
 )
 
 func TestMain(t *testing.T) {
-	fn := "../../goACVE/core/rawdata/rawdata.go"
+	fn := "../../goACVE/server/core/rawdata/models.go"
 	// fn := "../../intendance/server/models/models.go"
 	pkg, err := loader.LoadSource(fn)
 	if err != nil {
@@ -32,11 +33,14 @@ func TestMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	decls, err := loader.WalkFile(fullPath, pkg, NewHandler(et))
+
+	h := NewHandler(et)
+	decls, err := loader.WalkFile(fullPath, pkg, h)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := decls.Render(os.Stdout); err != nil {
+
+	if err := decls.Generate(os.Stdout, h); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -76,4 +80,8 @@ func TestTime(t *testing.T) {
 
 	objTime := pkg.Scope().Lookup(pkg.Scope().Names()[1])
 	fmt.Println(objTime.Type().String())
+
+	if utils.IsUnderlyingTime(objTime.Type()) != true {
+		t.Fatal()
+	}
 }

@@ -68,10 +68,12 @@ func (en enum) renderJSONconvertors() string {
 func (named) fromJSONBody() string { return "" }
 func (class) fromJSONBody() string { return "" }
 func (enum) fromJSONBody() string  { return "" }
+func (union) fromJSONBody() string { return "" } // TODO
 
 func (named) toJSONBody() string { return "" }
 func (class) toJSONBody() string { return "" }
 func (enum) toJSONBody() string  { return "" }
+func (union) toJSONBody() string { return "" } // TODO
 
 func (b basic) fromJSONBody() string {
 	return fmt.Sprintf("return %sFromJson(json);", b)

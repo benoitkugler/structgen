@@ -42,14 +42,6 @@ SELECT
 DROP FUNCTION f_delfunc;
 `
 
-type sqlFunc struct {
-	declId  string
-	content string
-}
-
-func (s sqlFunc) Id() string     { return s.declId }
-func (s sqlFunc) Render() string { return s.content }
-
 const (
 	vDynamic = `
 	-- No validation : accept anything
@@ -88,26 +80,26 @@ const (
 
 func (b basic) Id() string { return string(b) }
 
-func (b basic) AddValidation(l *loader.Declarations) {
-	s := sqlFunc{declId: FunctionName(b)}
+func (b basic) Validations() []loader.Declaration {
+	s := loader.Declaration{Id: FunctionName(b)}
 	if b == Dynamic { // special case for Dynamic
-		s.content = fmt.Sprintf(vDynamic, FunctionName(b))
+		s.Content = fmt.Sprintf(vDynamic, FunctionName(b))
 	} else {
-		s.content = fmt.Sprintf(vBasic, FunctionName(b), string(b))
+		s.Content = fmt.Sprintf(vBasic, FunctionName(b), string(b))
 	}
-	l.Add(s)
+	return []loader.Declaration{s}
 }
 
 func (b enumValue) Id() string { return b.enumType.Name }
 
-func (b enumValue) AddValidation(l *loader.Declarations) {
-	s := sqlFunc{declId: FunctionName(b)}
+func (b enumValue) Validations() []loader.Declaration {
+	s := loader.Declaration{Id: FunctionName(b)}
 	typeCast := `data#>>'{}'`
 	if b.enumType.IsInt {
 		typeCast = "data::int"
 	}
-	s.content = fmt.Sprintf(vEnum, FunctionName(b), string(b.basic), typeCast, b.enumType.AsTuple())
-	l.Add(s)
+	s.Content = fmt.Sprintf(vEnum, FunctionName(b), string(b.basic), typeCast, b.enumType.AsTuple())
+	return []loader.Declaration{s}
 }
 
 const vArray = `
@@ -133,7 +125,7 @@ func (b Array) Id() string {
 	return as + b.elem.Id()
 }
 
-func (b Array) AddValidation(l *loader.Declarations) {
+func (b Array) Validations() []loader.Declaration {
 	critereLength, acceptZeroLength := "", ""
 	if b.length >= 0 {
 		critereLength = fmt.Sprintf("AND jsonb_array_length(data) = %d", b.length)
@@ -144,10 +136,14 @@ func (b Array) AddValidation(l *loader.Declarations) {
 	if b.length == -1 { // accepts null
 		gardNull = "IF jsonb_typeof(data) = 'null' THEN RETURN TRUE; END IF;"
 	}
-	b.elem.AddValidation(l) // recursion
+
+	out := b.elem.Validations() // recursion
+
 	fn, elemFuncName := FunctionName(b), FunctionName(b.elem)
 	content := fmt.Sprintf(vArray, fn, gardNull, acceptZeroLength, elemFuncName, critereLength)
-	l.Add(sqlFunc{declId: fn, content: content})
+	out = append(out, loader.Declaration{Id: fn, Content: content})
+
+	return out
 }
 
 const vMap = `
@@ -169,11 +165,13 @@ func (b Map) Id() string {
 	return "map_" + b.elem.Id()
 }
 
-func (b Map) AddValidation(l *loader.Declarations) {
-	b.elem.AddValidation(l) // recursion
+func (b Map) Validations() []loader.Declaration {
+	out := b.elem.Validations() // recursion
 	fn, elemFuncName := FunctionName(b), FunctionName(b.elem)
 	content := fmt.Sprintf(vMap, fn, elemFuncName)
-	l.Add(sqlFunc{declId: fn, content: content})
+
+	out = append(out, loader.Declaration{Id: fn, Content: content})
+	return out
 }
 
 const vStruct = `
@@ -219,10 +217,10 @@ func (b Struct) Id() string {
 	return fmt.Sprintf("struct_%d", ha)
 }
 
-func (b Struct) AddValidation(l *loader.Declarations) {
+func (b Struct) Validations() (out []loader.Declaration) {
 	var keys, checks []string
 	for _, f := range b.fields {
-		f.type_.AddValidation(l) // recursion
+		out = append(out, f.type_.Validations()...) // recursion
 		keys = append(keys, fmt.Sprintf("'%s'", f.key))
 		checks = append(checks, fmt.Sprintf("AND %s(data->'%s')", FunctionName(f.type_), f.key))
 	}
@@ -233,5 +231,7 @@ func (b Struct) AddValidation(l *loader.Declarations) {
 	checkList := strings.Join(checks, "\n")
 	fn := FunctionName(b)
 	content := fmt.Sprintf(vStruct, fn, keyList, checkList)
-	l.Add(sqlFunc{declId: fn, content: content})
+	out = append(out, loader.Declaration{Id: fn, Content: content})
+
+	return out
 }

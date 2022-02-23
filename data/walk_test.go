@@ -24,11 +24,14 @@ func TestMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	decls, err := loader.WalkFile(fullPath, pkg, Handler{PackageName: "models", EnumsTable: en})
+
+	h := handler{PackageName: "models", EnumsTable: en}
+	decls, err := loader.WalkFile(fullPath, pkg, h)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := decls.Render(os.Stdout); err != nil {
+
+	if err := decls.Generate(os.Stdout, h); err != nil {
 		t.Fatal(err)
 	}
 }

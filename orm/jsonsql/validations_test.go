@@ -21,12 +21,14 @@ func TestValidations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	l := loader.NewDeclarations()
+
+	var l []loader.Declaration
 	for _, name := range pkg.Types.Scope().Names() {
 		if ty, ok := pkg.Types.Scope().Lookup(name).(*types.TypeName); ok {
 			jsonT := NewTypeJSON(ty.Type(), en)
-			jsonT.AddValidation(l)
+
+			l = append(l, jsonT.Validations()...)
 		}
 	}
-	_ = ioutil.WriteFile("test/valid.sql", []byte(l.ToString()), os.ModePerm)
+	_ = ioutil.WriteFile("test/valid.sql", []byte(loader.Render(l)), os.ModePerm)
 }

@@ -10,18 +10,22 @@ import (
 	"github.com/benoitkugler/structgen/utils"
 )
 
-var _ loader.Handler = handler{}
+var _ loader.Handler = (*handler)(nil)
 
-func NewHandler(enumsTable enums.EnumTable) handler {
-	return handler{enumsTable: enumsTable}
+func NewHandler(enumsTable enums.EnumTable) *handler {
+	return &handler{enumsTable: enumsTable, interfaces: make(map[union]*types.Interface)}
 }
 
 // stored a map of enum fields
 type handler struct {
 	enumsTable enums.EnumTable
+
+	types      []types.Type // we need to have discovered all types to handle interfaces
+	interfaces map[union]*types.Interface
 }
 
-func (d handler) HandleType(topLevelDecl *loader.Declarations, typ types.Type) {
+func (d *handler) HandleType(topLevelDecl *loader.Declarations, typ types.Type) {
+	d.types = append(d.types, typ)
 	d.analyseType(topLevelDecl, typ)
 }
 
@@ -110,6 +114,7 @@ func (d handler) analyseType(topLevelDecl *loader.Declarations, typ types.Type) 
 			underlyingDartType dartType
 			jsonDecl           jsonFunction
 		)
+
 		e, isEnum := d.enumsTable[finalName]
 		if isEnum {
 			underlyingDartType = enum(e)
@@ -118,6 +123,12 @@ func (d handler) analyseType(topLevelDecl *loader.Declarations, typ types.Type) 
 				name:    finalName,
 				content: enum(e).renderJSONconvertors(),
 			}
+		}
+
+		// handle interface after ending the walk
+		if inter, isInter := typ.Underlying().(*types.Interface); isInter {
+			// interface are handled after walking
+			d.interfaces[union(finalName)] = inter
 		}
 
 		// otherwise, extract underlying type
@@ -158,6 +169,8 @@ func (d handler) analyseType(topLevelDecl *loader.Declarations, typ types.Type) 
 			content: out.renderJSONconvertors(),
 		})
 		return out
+	case *types.Interface:
+		// TODO:
 	case *types.Pointer:
 		// indirection
 		return d.analyseType(topLevelDecl, typ.Elem())

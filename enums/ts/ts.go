@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	tplEnumDef = template.Must(template.New("enums_def").Parse(`{
+	tplEnumDef = template.Must(template.New("enums_def").Parse(`enum {{.Name}} {
 	{{ range .Values -}}
 	{{ .VarName }} = {{ .Value }},
 	{{ end -}}

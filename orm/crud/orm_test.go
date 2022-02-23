@@ -9,7 +9,7 @@ import (
 )
 
 func TestMain(t *testing.T) {
-	fn := "../../../goACVE/core/rawdata/models.go"
+	fn := "../../../goACVE/server/core/rawdata/models.go"
 	// fn := "../../../intendance/server/models/models.go"
 	pkg, err := loader.LoadSource(fn)
 	if err != nil {
@@ -24,11 +24,9 @@ func TestMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := decls.Render(os.Stdout); err != nil {
-		t.Fatal(err)
-	}
-	if err := typeHandler.WriteFooter(os.Stdout); err != nil {
-		t.Fatal(err)
-	}
 
+	err = decls.Generate(os.Stdout, typeHandler)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
