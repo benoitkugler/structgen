@@ -60,8 +60,8 @@ func NewTypeJSON(t types.Type, enums enums.EnumTable) TypeJSON {
 }
 
 type field struct {
-	key   string
 	type_ TypeJSON
+	key   string
 }
 
 // Struct is a fixed field struct
@@ -92,8 +92,8 @@ func newMap(t *types.Map, enums enums.EnumTable) Map {
 
 // Array encode a slice or an array (homogenous)
 type Array struct {
-	length int64 // -1 for slice
 	elem   TypeJSON
+	length int64 // -1 for slice
 }
 
 func newArrayFromArray(t *types.Array, enums enums.EnumTable) Array {

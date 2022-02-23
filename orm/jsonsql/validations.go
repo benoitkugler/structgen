@@ -193,7 +193,7 @@ const vStruct = `
 	IMMUTABLE;`
 
 // to work around possible hash collision,
-// we need to be able to check
+// we need to be able to check if an hash is already taken
 var structIdsTable = map[uint32]Struct{}
 
 func (b Struct) dump() []byte {

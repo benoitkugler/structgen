@@ -126,9 +126,9 @@ func typeName(targetPackage string, type_ types.Type) string {
 }
 
 type FnArray struct {
+	Elem          dataFunction
 	TargetPackage string
 	Length        int64
-	Elem          dataFunction
 }
 
 func (f FnArray) Id() string {
@@ -159,8 +159,8 @@ func (f FnArray) Render() []loader.Declaration {
 }
 
 type FnSlice struct {
-	TargetPackage string
 	Elem          dataFunction
+	TargetPackage string
 }
 
 func (f FnSlice) Id() string {
@@ -192,9 +192,9 @@ func (f FnSlice) Render() []loader.Declaration {
 }
 
 type FnMap struct {
-	TargetPackage string
 	Key           dataFunction
 	Elem          dataFunction
+	TargetPackage string
 }
 
 func (f FnMap) Id() string {
@@ -229,9 +229,9 @@ func (f FnMap) Render() []loader.Declaration {
 
 // structField stores one property of an object
 type structField struct {
+	type_ dataFunction
 	Name  string
 	Id    string
-	type_ dataFunction
 }
 
 // FnStruct generate a named random struct
@@ -275,8 +275,8 @@ func (f FnStruct) Render() (decls []loader.Declaration) {
 }
 
 type FnPointer struct {
-	TargetPackage string
 	Elem          dataFunction
+	TargetPackage string
 }
 
 func (f FnPointer) Id() string {
@@ -303,9 +303,9 @@ func (f FnPointer) Render() []loader.Declaration {
 }
 
 type FnNamed struct {
-	TargetPackage string
 	Type_         *types.Named
 	Underlying    dataFunction
+	TargetPackage string
 }
 
 func (f FnNamed) Id() string {

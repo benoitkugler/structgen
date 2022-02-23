@@ -1,26 +1,30 @@
 package test
 
-type s struct {
-	V int
+type concret1 struct {
+	List2 []int
+	V     int
 }
 
-type b struct {
+type concret2 struct {
 	D float64
 }
 
-type i interface {
+type itfName interface {
 	isI()
 }
 
-func (s) isI() {}
-func (b) isI() {}
+func (concret1) isI() {}
+func (concret2) isI() {}
 
 var (
-	_ i = s{}
-	_ i = b{}
+	_ itfName = concret1{}
+	_ itfName = concret2{}
 )
 
 type model struct {
+	Value itfName
 	A     int
-	Value i
+	L     ListV
 }
+
+type ListV []itfName

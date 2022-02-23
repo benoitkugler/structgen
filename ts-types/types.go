@@ -81,9 +81,9 @@ func (t tsBasic) name() string { return string(t) }
 // TsNamedType represents a defined user type,
 // appart from enums and structs.
 type TsNamedType struct {
+	underlying tsType
 	origin     string
 	name_      string
-	underlying tsType
 }
 
 func (named TsNamedType) Render() []loader.Declaration {
@@ -129,8 +129,8 @@ func (t TsArray) name() string {
 
 // TsEnum represents an enum type
 type TsEnum struct {
-	enum   enums.Type
 	origin string
+	enum   enums.Type
 }
 
 func (t TsEnum) Render() []loader.Declaration {

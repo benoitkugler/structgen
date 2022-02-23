@@ -32,17 +32,21 @@ func TestInterfaces(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, err := os.Create("test.dart")
+	h.processInterfaces()
+
+	itf := h.interfaces["itfName"]
+	if len(itf.members) != 2 {
+		t.Fatalf("unexpected members %v", itf.members)
+	}
+
+	out, err := os.Create("test/gen.dart")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer out.Close()
 
-	if err := h.WriteHeader(out); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := decls.Render(out); err != nil {
+	err = decls.Generate(out, h)
+	if err != nil {
 		t.Fatal(err)
 	}
 }
@@ -77,11 +81,8 @@ func TestMain(t *testing.T) {
 	}
 	defer out.Close()
 
-	if err := h.WriteHeader(out); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := decls.Render(out); err != nil {
+	err = decls.Generate(out, h)
+	if err != nil {
 		t.Fatal(err)
 	}
 }

@@ -58,9 +58,9 @@ type constraint interface {
 }
 
 type sqlGenHandler struct {
-	constraints     []constraint
-	enumsTable      enums.EnumTable
 	lookupEnumTable map[string]string // cached from `enumsTable`
+	enumsTable      enums.EnumTable
+	constraints     []constraint
 }
 
 func (l sqlGenHandler) Header() string {
