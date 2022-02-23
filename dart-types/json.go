@@ -114,7 +114,7 @@ func (u union) json() string {
 			return %sFromJson(data);`, i, member.functionId()))
 
 		caseTo := fmt.Sprintf(`if (item is %s) {
-			return {'__kind__': %d, '__data__': %sToJson(item)};
+			return {'Kind': %d, 'Data': %sToJson(item)};
 		}`, member.name(), i, member.functionId())
 		if i != 0 {
 			caseTo = "else " + caseTo
@@ -124,8 +124,8 @@ func (u union) json() string {
 
 	codeFrom := fmt.Sprintf(`%s %sFromJson(dynamic json_) {
 		final json = json_ as JSON;
-		final kind = json['__kind__'] as int;
-		final data = json['__data__'];
+		final kind = json['Kind'] as int;
+		final data = json['Data'];
 		switch (kind) {
 			%s
 		default:
@@ -138,6 +138,59 @@ func (u union) json() string {
 		%s else {
 			throw ("unexpected type");
 		}	
+	}
+	`, u.name_, u.name_, strings.Join(casesTo, ""))
+
+	return codeFrom + "\n" + codeTo
+}
+
+// return the go code implementing JSON convertions
+func (u union) goJSON() string {
+	var casesFrom, casesTo []string
+
+	for i, member := range u.members {
+		casesFrom = append(casesFrom, fmt.Sprintf(`case %d:
+			var out %s
+			err = json.Unmarshal(wr.Data, &out)
+			return out, err
+	`, i, member.name()))
+
+		caseTo := fmt.Sprintf(`case %s:
+			out = wrapper{Kind: %d, Data: item}
+		`, member.name(), i)
+		casesTo = append(casesTo, caseTo)
+	}
+
+	codeFrom := fmt.Sprintf(`func %sUnmarshallJSON(src []byte) (%s, error) {
+		type wrapper struct {
+			Data json.RawMessage
+			Kind int
+		}
+		var wr wrapper
+		err := json.Unmarshal(src, &wr)
+		if err != nil {
+			return nil, err
+		}
+		switch wr.Kind {
+			%s
+		default:
+			panic("exhaustive switch")
+		}
+	}
+	`, u.name_, u.name_, strings.Join(casesFrom, ""))
+
+	codeTo := fmt.Sprintf(`func %sMarshallJSON(item %s) ([]byte, error) {
+		type wrapper struct {
+				Data interface{}  
+				Kind int         
+		}
+		var out wrapper
+		switch item.(type) {
+		%s
+		default:
+			panic("exhaustive switch")
+		}
+		return json.Marshal(out)
 	}
 	`, u.name_, u.name_, strings.Join(casesTo, ""))
 

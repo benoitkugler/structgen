@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	darttypes "github.com/benoitkugler/structgen/dart-types"
 	"github.com/benoitkugler/structgen/data"
 	"github.com/benoitkugler/structgen/enums"
 	"github.com/benoitkugler/structgen/loader"
@@ -78,6 +79,8 @@ func main() {
 		switch m.mode {
 		case "ts":
 			typeHandler = tstypes.NewHandler(en)
+		case "dart":
+			typeHandler = darttypes.NewHandler(en)
 		case "rand":
 			typeHandler = data.NewHandler(packageName, en)
 		case "sql":

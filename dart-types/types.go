@@ -188,17 +188,16 @@ func (u *union) functionId() string { return u.name_ }
 func (u *union) Render() (out []loader.Declaration) {
 	// ensure order
 	sort.Slice(u.members, func(i, j int) bool { return u.members[i].name() < u.members[j].name() })
-
-	var kinds []string
-	for i, member := range u.members {
+	for _, member := range u.members {
 		out = append(out, member.Render()...)
-		kinds = append(kinds, fmt.Sprintf("// %s : %d", member.name(), i))
 	}
 
-	content := fmt.Sprintf(`// The following constants are used to detect the concrete types :
-	%s 
+	content := fmt.Sprintf(`// Corresponding Go code
+	/*
+	%s
+	*/ 
 	abstract class %s {}
-	`, strings.Join(kinds, "\n"), u.name_)
+	`, u.goJSON(), u.name_)
 
 	content += u.json()
 
