@@ -192,12 +192,8 @@ func (u *union) Render() (out []loader.Declaration) {
 		out = append(out, member.Render()...)
 	}
 
-	content := fmt.Sprintf(`// Corresponding Go code
-	/*
-	%s
-	*/ 
-	abstract class %s {}
-	`, u.goJSON(), u.name_)
+	content := fmt.Sprintf(`abstract class %s {}
+	`, u.name_)
 
 	content += u.json()
 

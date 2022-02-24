@@ -32,13 +32,6 @@ func TestInterfaces(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h.processInterfaces()
-
-	itf := h.interfaces["itfName"]
-	if len(itf.members) != 2 {
-		t.Fatalf("unexpected members %v", itf.members)
-	}
-
 	out, err := os.Create("test/gen.dart")
 	if err != nil {
 		t.Fatal(err)

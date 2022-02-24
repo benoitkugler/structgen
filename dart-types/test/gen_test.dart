@@ -14,4 +14,5 @@ main(List<String> args) {
   if (s != s2) {
     throw ("inconstistent roundtrip");
   }
+  print("OK");
 }
