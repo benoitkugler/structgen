@@ -55,6 +55,11 @@ type classField struct {
 	name  string
 }
 
+// convert to dart convention
+func (cl classField) dartName() string {
+	return lowerFirst(cl.name)
+}
+
 type class struct {
 	origin     string
 	name_      string // needed for constructors
@@ -69,8 +74,8 @@ func (cl *class) Render() (out []loader.Declaration) {
 	var fields, initFields []string
 	for _, field := range cl.fields {
 		out = append(out, field.type_.Render()...)
-		fields = append(fields, fmt.Sprintf("final %s %s;", field.type_.name(), field.name))
-		initFields = append(initFields, fmt.Sprintf("this.%s", field.name))
+		fields = append(fields, fmt.Sprintf("final %s %s;", field.type_.name(), field.dartName()))
+		initFields = append(initFields, fmt.Sprintf("this.%s", field.dartName()))
 	}
 
 	var implements string

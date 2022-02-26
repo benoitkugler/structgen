@@ -75,7 +75,7 @@ func (cl class) json() string {
 	var fieldsFrom, fieldsTo []string
 	for _, f := range cl.fields {
 		fieldsFrom = append(fieldsFrom, fmt.Sprintf("%sFromJson(json['%s'])", f.type_.functionId(), f.name))
-		fieldsTo = append(fieldsTo, fmt.Sprintf("%q : %sToJson(item.%s)", f.name, f.type_.functionId(), f.name))
+		fieldsTo = append(fieldsTo, fmt.Sprintf("%q : %sToJson(item.%s)", f.name, f.type_.functionId(), f.dartName()))
 	}
 	return fmt.Sprintf(`
 	%s %sFromJson(dynamic json_) {

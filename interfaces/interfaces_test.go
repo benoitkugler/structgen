@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -43,6 +44,11 @@ func TestAnalyze(t *testing.T) {
 	defer out.Close()
 
 	err = decls.Generate(out, h)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = exec.Command("goimports", "-w", "test/gen.go").Run()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -71,8 +71,6 @@ func (d handler) convertFields(structType *types.Struct) []classField {
 			continue
 		}
 
-		// convert to dart convention
-		finalName = lowerFirst(finalName)
 		dartField := d.analyseType(field.Type())
 		out = append(out, classField{name: finalName, type_: dartField})
 	}
