@@ -2,6 +2,7 @@ package darttypes
 
 import (
 	"go/types"
+	"strings"
 
 	"github.com/benoitkugler/structgen/enums"
 	"github.com/benoitkugler/structgen/interfaces"
@@ -70,6 +71,8 @@ func (d handler) convertFields(structType *types.Struct) []classField {
 			continue
 		}
 
+		// convert to dart convention
+		finalName = lowerFirst(finalName)
 		dartField := d.analyseType(field.Type())
 		out = append(out, classField{name: finalName, type_: dartField})
 	}
@@ -129,6 +132,8 @@ func (d handler) createType(typ types.Type) dartType {
 		if isEnum {
 			return enum{origin: origin, enum: e}
 		}
+
+		finalName = strings.Title(finalName)
 
 		// handle interface after ending the walk
 		if inter, isInter := typ.Underlying().(*types.Interface); isInter {

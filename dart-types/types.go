@@ -23,10 +23,14 @@ type dartType interface {
 	functionId() string // how to call function associated with this type
 }
 
+func lowerFirst(s string) string {
+	return strings.ToLower(s[0:1]) + s[1:]
+}
+
 type basic string
 
 func (b basic) name() string       { return string(b) }
-func (b basic) functionId() string { return string(b) }
+func (b basic) functionId() string { return lowerFirst(string(b)) }
 
 func (b basic) Render() []loader.Declaration {
 	return []loader.Declaration{{Id: b.name() + "json", Content: b.json()}}
@@ -59,7 +63,7 @@ type class struct {
 }
 
 func (cl class) name() string       { return cl.name_ }
-func (cl class) functionId() string { return cl.name_ }
+func (cl class) functionId() string { return lowerFirst(cl.name_) }
 
 func (cl *class) Render() (out []loader.Declaration) {
 	var fields, initFields []string
@@ -80,7 +84,7 @@ func (cl *class) Render() (out []loader.Declaration) {
 		class %s %s {
 		%s
 
-		%s(%s);
+		const %s(%s);
 		}
 		
 		%s
@@ -103,7 +107,7 @@ func (l list) name() string {
 }
 
 func (l list) functionId() string {
-	return "List_" + l.element.functionId()
+	return "list" + strings.Title(l.element.functionId())
 }
 
 func (l list) Render() []loader.Declaration {
@@ -135,7 +139,7 @@ func (d dict) Render() []loader.Declaration {
 }
 
 func (d dict) functionId() string {
-	return "Dict_" + d.key.functionId() + "_" + d.element.functionId()
+	return "dict" + strings.Title(d.key.functionId()) + strings.Title(d.element.functionId())
 }
 
 type enum struct {
@@ -144,7 +148,7 @@ type enum struct {
 }
 
 func (e enum) name() string       { return e.enum.Name }
-func (e enum) functionId() string { return e.enum.Name }
+func (e enum) functionId() string { return lowerFirst(e.enum.Name) }
 
 func (e enum) Render() []loader.Declaration {
 	content := "// " + e.origin + "\n" + dartEnums.EnumAsDart(e.enum)
@@ -183,7 +187,7 @@ type union struct {
 }
 
 func (u *union) name() string       { return u.name_ }
-func (u *union) functionId() string { return u.name_ }
+func (u *union) functionId() string { return lowerFirst(u.name_) }
 
 func (u *union) Render() (out []loader.Declaration) {
 	// ensure order

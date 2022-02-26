@@ -47,37 +47,51 @@ func (i *Modes) Set(value string) error {
 	return nil
 }
 
+var hasGoFmt, hasDartFmt, hasTsFmt *bool
+
 // check if the goimports command is working
 func hasGoFormatter() bool {
-	err := exec.Command("which", "goimports").Run()
-	if err != nil {
-		log.Printf("no formatter for Go (%s)", err)
-	} else {
-		log.Println("formatter for Go detected")
+	if hasGoFmt == nil {
+		err := exec.Command("which", "goimports").Run()
+		if err != nil {
+			log.Printf("no formatter for Go (%s)", err)
+		} else {
+			log.Println("formatter for Go detected")
+		}
+		hasGoFmt = new(bool)
+		*hasGoFmt = err == nil
 	}
-	return err == nil
+	return *hasGoFmt
 }
 
 // check if the dart command is working
 func hasDartFormatter() bool {
-	err := exec.Command("dart", "format", "--help").Run()
-	if err != nil {
-		log.Printf("no formatter for Dart (%s)", err)
-	} else {
-		log.Println("formatter for Dart detected")
+	if hasDartFmt == nil {
+		err := exec.Command("dart", "format", "--help").Run()
+		if err != nil {
+			log.Printf("no formatter for Dart (%s)", err)
+		} else {
+			log.Println("formatter for Dart detected")
+		}
+		hasDartFmt = new(bool)
+		*hasDartFmt = err == nil
 	}
-	return err == nil
+	return *hasDartFmt
 }
 
 // check if the prettier command is working
 func hasTypescriptFormatter() bool {
-	err := exec.Command("npx", "prettier", "-v").Run()
-	if err != nil {
-		log.Printf("no formatter for Typescript (%s)", err)
-	} else {
-		log.Println("formatter for Typescript detected")
+	if hasTsFmt == nil {
+		err := exec.Command("npx", "prettier", "-v").Run()
+		if err != nil {
+			log.Printf("no formatter for Typescript (%s)", err)
+		} else {
+			log.Println("formatter for Typescript detected")
+		}
+		hasTsFmt = new(bool)
+		*hasTsFmt = err == nil
 	}
-	return err == nil
+	return *hasTsFmt
 }
 
 func main() {
@@ -87,10 +101,6 @@ func main() {
 		formatDart
 		formatTs
 	)
-
-	hasGoFmt := hasGoFormatter()
-	hasDartFmt := hasDartFormatter()
-	hasTsFmt := hasTypescriptFormatter()
 
 	source := flag.String("source", "", "go source file to convert")
 	var modes Modes
@@ -119,7 +129,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	packageName := filepath.Base(pkg.ID)
+	packageName := pkg.Name
 	for _, m := range modes {
 		var (
 			typeHandler loader.Handler
@@ -177,15 +187,15 @@ func main() {
 
 		switch format {
 		case formatGo:
-			if hasGoFmt {
+			if hasGoFormatter() {
 				err = exec.Command("goimports", "-w", m.output).Run()
 			}
 		case formatDart:
-			if hasDartFmt {
+			if hasDartFormatter() {
 				err = exec.Command("dart", "format", m.output).Run()
 			}
 		case formatTs:
-			if hasTsFmt {
+			if hasGoFormatter() {
 				err = exec.Command("npx", "prettier", "--write", m.output).Run()
 			}
 		}

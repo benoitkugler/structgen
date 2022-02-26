@@ -21,11 +21,11 @@ func (b basic) json() string {
 		
 		dynamic %sToJson(%s item) => item;
 		
-		`, b, b, b, b, b)
+		`, b, b.functionId(), b, b.functionId(), b)
 	case dartTime:
-		return `DateTime DateTimeFromJson(dynamic json) => DateTime.parse(json as String);
+		return `DateTime dateTimeFromJson(dynamic json) => DateTime.parse(json as String);
 
-		dynamic DateTimeToJson(DateTime dt) => dt.toString();
+		dynamic dateTimeToJson(DateTime dt) => dt.toString();
 		`
 	default:
 		panic("exhaustive switch")
@@ -41,8 +41,8 @@ func (en enum) json() string {
 	
 	dynamic %sToJson(%s item) => item.toValue();
 	
-	`, en.enum.Name, en.enum.Name, en.enum.Name, valueType,
-		en.enum.Name, en.enum.Name,
+	`, en.enum.Name, en.functionId(), en.enum.Name, valueType,
+		en.functionId(), en.enum.Name,
 	)
 }
 
@@ -91,8 +91,8 @@ func (cl class) json() string {
 		};
 	}
 	
-	`, cl.name_, cl.name_, cl.name_, strings.Join(fieldsFrom, ",\n"),
-		cl.name_, cl.name_, strings.Join(fieldsTo, ",\n"),
+	`, cl.name_, cl.functionId(), cl.name_, strings.Join(fieldsFrom, ",\n"),
+		cl.functionId(), cl.name_, strings.Join(fieldsTo, ",\n"),
 	)
 }
 
@@ -122,14 +122,14 @@ func (u union) json() string {
 			throw ("unexpected type");
 		}
 	}
-	`, u.name_, u.name_, strings.Join(casesFrom, "\n"))
+	`, u.name_, u.functionId(), strings.Join(casesFrom, "\n"))
 
 	codeTo := fmt.Sprintf(`JSON %sToJson(%s item) {
 		%s else {
 			throw ("unexpected type");
 		}	
 	}
-	`, u.name_, u.name_, strings.Join(casesTo, ""))
+	`, u.functionId(), u.name_, strings.Join(casesTo, ""))
 
 	return codeFrom + "\n" + codeTo
 }
