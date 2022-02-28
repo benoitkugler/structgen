@@ -2,12 +2,29 @@ package dart
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/benoitkugler/structgen/enums"
 )
 
 func EnumAsDart(e enums.Type) string {
+	if e.IsInt {
+		// we have to sort by values, which must be ints
+		sort.Slice(e.Values, func(i, j int) bool {
+			vi, err := strconv.Atoi(e.Values[i].Value)
+			if err != nil {
+				panic(err)
+			}
+			vj, err := strconv.Atoi(e.Values[j].Value)
+			if err != nil {
+				panic(err)
+			}
+			return vi < vj
+		})
+	}
+
 	var names, values, labels []string
 	for _, v := range e.Values {
 		names = append(names, v.VarName)
@@ -16,7 +33,8 @@ func EnumAsDart(e enums.Type) string {
 	}
 
 	var fromValue string
-	if e.IsInt { // want can just use Dart builtin enums
+	if e.IsInt { // we can just use Dart builtin enums
+
 		fromValue = fmt.Sprintf(`static %s fromValue(int i) {
 			return i as %s;
 		}

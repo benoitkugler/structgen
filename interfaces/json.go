@@ -16,7 +16,7 @@ func (u Interface) json() string {
 		casesFrom = append(casesFrom, fmt.Sprintf(`case %d:
 			var data %s
 			err = json.Unmarshal(wr.Data, &data)
-			out.data = data
+			out.Data = data
 	`, i, member.Obj().Name()))
 
 		caseTo := fmt.Sprintf(`case %s:
@@ -49,7 +49,7 @@ func (u Interface) json() string {
 			Kind int
 		}
 		var wr wrapper
-		switch data := item.data.(type) {
+		switch data := item.Data.(type) {
 		%s
 		default:
 			panic("exhaustive switch")
@@ -62,7 +62,7 @@ func (u Interface) json() string {
 	// %s may be used as replacements for %s 
 	// when working with JSON
 	type %s struct{
-		data %s
+		Data %s
 	}
 
 	%s 
