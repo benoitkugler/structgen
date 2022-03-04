@@ -189,12 +189,12 @@ func (h handler) processInterfaces() {
 		dartITF := h.types[itf.Name].(*union)
 
 		for _, member := range itf.Members {
-			dart := h.types[member]
-			if cl, isClass := dart.(*class); isClass {
+			dartMember := h.types[member]
+			if cl, isClass := dartMember.(*class); isClass {
 				cl.interfaces = append(cl.interfaces, dartITF.name_)
 			}
 
-			dartITF.members = append(dartITF.members, dart)
+			dartITF.members = append(dartITF.members, dartMember)
 		}
 	}
 }

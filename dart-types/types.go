@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"go/types"
 	"sort"
+	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/benoitkugler/structgen/enums"
-	dartEnums "github.com/benoitkugler/structgen/enums/dart"
 	"github.com/benoitkugler/structgen/loader"
 )
 
@@ -152,11 +153,76 @@ type enum struct {
 	enum   enums.Type
 }
 
-func (e enum) name() string       { return e.enum.Name }
+func (e enum) name() string       { return strings.Title(e.enum.Name) }
 func (e enum) functionId() string { return lowerFirst(e.enum.Name) }
 
 func (e enum) Render() []loader.Declaration {
-	content := "// " + e.origin + "\n" + dartEnums.EnumAsDart(e.enum)
+	if e.enum.IsInt {
+		// we have to sort by values, which must be ints
+		sort.Slice(e.enum.Values, func(i, j int) bool {
+			vi, err := strconv.Atoi(e.enum.Values[i].Value)
+			if err != nil {
+				panic(err)
+			}
+			vj, err := strconv.Atoi(e.enum.Values[j].Value)
+			if err != nil {
+				panic(err)
+			}
+			return vi < vj
+		})
+	}
+
+	var names, values, labels []string
+	for _, v := range e.enum.Values {
+		if unicode.IsLower(rune(v.VarName[0])) {
+			continue
+		}
+		names = append(names, lowerFirst(v.VarName))
+		labels = append(labels, fmt.Sprintf("%q", v.Label))
+		values = append(values, v.Value)
+	}
+
+	var fromValue string
+	if e.enum.IsInt { // we can just use Dart builtin enums
+
+		fromValue = fmt.Sprintf(`static %s fromValue(int i) {
+			return %s.values[i];
+		}
+		
+		int toValue() {
+			return index;
+		}
+		`, e.name(), e.name())
+	} else { // add lookup array
+		fromValue = fmt.Sprintf(`
+		static const _values = [
+			%s
+		];
+		static %s fromValue(String s) {
+			return _values.indexOf(s) as %s;
+		}
+	
+		String toValue() {
+			return _values[index];
+		}
+		`, strings.Join(values, ", "), e.name(), e.name())
+	}
+	enumDecl := fmt.Sprintf(`enum  %s {
+		%s
+	}
+	
+	extension _%sExt on %s {
+		static const _labels = [
+			%s
+		];
+		
+		String label() { return _labels[index]; }
+
+		%s
+	}
+	`, e.name(), strings.Join(names, ", "), e.name(), e.name(), strings.Join(labels, ", "), fromValue)
+
+	content := "// " + e.origin + "\n" + enumDecl
 	content += "\n" + e.json()
 
 	return []loader.Declaration{{Id: e.enum.Name, Content: content}}
@@ -196,7 +262,6 @@ func (u *union) functionId() string { return lowerFirst(u.name_) }
 
 func (u *union) Render() (out []loader.Declaration) {
 	// ensure order
-	sort.Slice(u.members, func(i, j int) bool { return u.members[i].name() < u.members[j].name() })
 	for _, member := range u.members {
 		out = append(out, member.Render()...)
 	}

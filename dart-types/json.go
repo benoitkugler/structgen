@@ -37,17 +37,21 @@ func (en enum) json() string {
 	if en.enum.IsInt {
 		valueType = "int"
 	}
-	return fmt.Sprintf(`%s %sFromJson(dynamic json) => __%s.fromValue(json as %s);
+	return fmt.Sprintf(`%s %sFromJson(dynamic json) => _%sExt.fromValue(json as %s);
 	
 	dynamic %sToJson(%s item) => item.toValue();
 	
-	`, en.enum.Name, en.functionId(), en.enum.Name, valueType,
-		en.functionId(), en.enum.Name,
+	`, en.name(), en.functionId(), en.name(), valueType,
+		en.functionId(), en.name(),
 	)
 }
 
 func (l list) json() string {
+	// nil slices are jsonized as null, check for it then
 	return fmt.Sprintf(`%s %sFromJson(dynamic json) {
+		if (json == null) {
+			return [];
+		}
 		return (json as List<dynamic>).map(%sFromJson).toList();
 	}
 
@@ -60,14 +64,23 @@ func (l list) json() string {
 }
 
 func (d dict) json() string {
+	keyFromJson := "k as " + d.key.name()
+	if d.key.name() == "int" {
+		keyFromJson = "int.parse(k)"
+	}
+
+	// nil dict are jsonized as null, check for it then
 	return fmt.Sprintf(`%s %sFromJson(dynamic json) {
-		return json.map((k,v) => MapEntry(k as %s, %sFromJson(v)));
+		if (json == null) {
+			return {};
+		}
+		return (json as JSON).map((k,v) => MapEntry(%s, %sFromJson(v)));
 	}
 	
 	dynamic %sToJson(%s item) {
 		return item.map((k,v) => MapEntry(%sToJson(k), %sToJson(v)));
 	}
-	`, d.name(), d.functionId(), d.key.name(), d.element.functionId(),
+	`, d.name(), d.functionId(), keyFromJson, d.element.functionId(),
 		d.functionId(), d.name(), d.key.functionId(), d.element.functionId())
 }
 
