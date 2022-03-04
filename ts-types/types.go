@@ -12,23 +12,24 @@ import (
 // These types are built from go/types,
 // and know how to render themselves to .ts code.
 
-var _ loader.Type = tsType(nil)
+var _ loader.Type = Type(nil)
 
-// tsType is the common interface of all ts types.
-type tsType interface {
+// Type is the common interface of all types
+// used in the generated TypeScript code.
+type Type interface {
 	Render() []loader.Declaration
 
-	// return the name referencing the type
-	name() string
+	// return the Name referencing the type
+	Name() string
 }
 
 // NullableTsType wraps a type, making him nullable.
 type NullableTsType struct {
-	tsType
+	Type
 }
 
-func (t NullableTsType) name() string {
-	return t.tsType.name() + " | null"
+func (t NullableTsType) Name() string {
+	return t.Type.Name() + " | null"
 }
 
 var timesStringDefinition = loader.Declaration{
@@ -76,12 +77,12 @@ func (t tsBasic) Render() []loader.Declaration {
 	}
 }
 
-func (t tsBasic) name() string { return string(t) }
+func (t tsBasic) Name() string { return string(t) }
 
 // TsNamedType represents a defined user type,
 // appart from enums and structs.
 type TsNamedType struct {
-	underlying tsType
+	underlying Type
 	origin     string
 	name_      string
 }
@@ -90,18 +91,18 @@ func (named TsNamedType) Render() []loader.Declaration {
 	deps := named.underlying.Render()
 
 	code := fmt.Sprintf(`// %s
-	export type %s = %s`, named.origin, named.name_, named.underlying.name())
+	export type %s = %s`, named.origin, named.name_, named.underlying.Name())
 
 	deps = append(deps, loader.Declaration{Id: named.name_, Content: code})
 	return deps
 }
 
-func (t TsNamedType) name() string { return t.name_ }
+func (t TsNamedType) Name() string { return t.name_ }
 
 // TsMap represents a mapping object
 type TsMap struct {
-	key  tsType
-	elem tsType
+	key  Type
+	elem Type
 }
 
 func (t TsMap) Render() []loader.Declaration {
@@ -109,13 +110,13 @@ func (t TsMap) Render() []loader.Declaration {
 	return append(t.key.Render(), t.elem.Render()...)
 }
 
-func (t TsMap) name() string {
-	return fmt.Sprintf("{ [key: %s]: %s }", t.key.Render(), t.elem.Render())
+func (t TsMap) Name() string {
+	return fmt.Sprintf("{ [key: %s]: %s }", t.key.Name(), t.elem.Name())
 }
 
 // TsArray represents an array
 type TsArray struct {
-	elem tsType
+	elem Type
 }
 
 func (t TsArray) Render() []loader.Declaration {
@@ -123,8 +124,8 @@ func (t TsArray) Render() []loader.Declaration {
 	return t.elem.Render()
 }
 
-func (t TsArray) name() string {
-	return t.elem.name() + "[]"
+func (t TsArray) Name() string {
+	return t.elem.Name() + "[]"
 }
 
 // TsEnum represents an enum type
@@ -141,11 +142,11 @@ func (t TsEnum) Render() []loader.Declaration {
 	}}
 }
 
-func (t TsEnum) name() string { return t.enum.Name }
+func (t TsEnum) Name() string { return t.enum.Name }
 
 // StructField stores one propery of an object
 type StructField struct {
-	Type tsType
+	Type Type
 	Name string
 }
 
@@ -154,10 +155,10 @@ type TsObject struct {
 	origin  string
 	name_   string
 	fields  []StructField
-	embeded []tsType
+	embeded []Type
 }
 
-func (t TsObject) name() string { return t.name_ }
+func (t TsObject) Name() string { return t.name_ }
 
 func (t TsObject) Render() (decls []loader.Declaration) {
 	out := "// " + t.origin + "\n"
@@ -170,12 +171,12 @@ func (t TsObject) Render() (decls []loader.Declaration) {
 
 	for _, field := range t.fields {
 		decls = append(decls, field.Type.Render()...)
-		out += fmt.Sprintf("\t%s: %s,\n", field.Name, field.Type.name())
+		out += fmt.Sprintf("\t%s: %s,\n", field.Name, field.Type.Name())
 	}
 	out += "}"
 	for _, embeded := range t.embeded {
 		decls = append(decls, embeded.Render()...)
-		out += " & " + embeded.name()
+		out += " & " + embeded.Name()
 	}
 
 	decls = append(decls, loader.Declaration{Id: t.name_, Content: out})

@@ -52,15 +52,16 @@ type Handler interface {
 // to write.
 type Declarations []Type
 
-func (ds Declarations) render() (out []Declaration) {
+// Render converts the types to declarations.
+func (ds Declarations) Render() (out []Declaration) {
 	for _, ty := range ds {
 		out = append(out, ty.Render()...)
 	}
 	return out
 }
 
-// Render remove duplicates and aggregate the declarations
-func Render(decls []Declaration) string {
+// ToString remove duplicates and aggregate the declarations.
+func ToString(decls []Declaration) string {
 	keys := map[string]bool{}
 	var out strings.Builder
 	for _, decl := range decls {
@@ -79,7 +80,7 @@ func (ds Declarations) Generate(out io.Writer, handler Handler) error {
 		return fmt.Errorf("generating header: %s", err)
 	}
 
-	if _, err = io.WriteString(out, Render(ds.render())); err != nil {
+	if _, err = io.WriteString(out, ToString(ds.Render())); err != nil {
 		return fmt.Errorf("generating declarations: %s", err)
 	}
 

@@ -20,7 +20,7 @@ type handler struct {
 }
 
 func (d handler) HandleType(typ types.Type) loader.Type {
-	return d.analyseType(typ)
+	return d.AnalyseType(typ)
 }
 
 func (d handler) HandleComment(comment loader.Comment) error { return nil }
@@ -30,10 +30,10 @@ func (d handler) Header() string {
 }
 func (d handler) Footer() string { return "" }
 
-func (d handler) convertFields(structType *types.Struct) ([]StructField, []tsType) {
+func (d handler) convertFields(structType *types.Struct) ([]StructField, []Type) {
 	var (
 		out      []StructField
-		embedded []tsType
+		embedded []Type
 	)
 	for i := 0; i < structType.NumFields(); i++ {
 		field := structType.Field(i)
@@ -46,19 +46,19 @@ func (d handler) convertFields(structType *types.Struct) ([]StructField, []tsTyp
 		// special case for embedded
 		if field.Embedded() {
 			// recursion on embeded struct
-			fieldTsType := d.analyseType(field.Type())
+			fieldTsType := d.AnalyseType(field.Type())
 			// add it to embeded
 			embedded = append(embedded, fieldTsType)
 			continue
 		}
 
-		tsFieldType := d.analyseType(field.Type())
+		tsFieldType := d.AnalyseType(field.Type())
 		out = append(out, StructField{Name: finalName, Type: tsFieldType})
 	}
 	return out, embedded
 }
 
-func analyseBasicType(typ *types.Basic) tsType {
+func analyseBasicType(typ *types.Basic) Type {
 	info := typ.Info()
 	if info&types.IsBoolean != 0 {
 		return TsBoolean
@@ -71,9 +71,9 @@ func analyseBasicType(typ *types.Basic) tsType {
 	}
 }
 
-// analyseType converts a go type into a ts equivalent
+// AnalyseType converts a Go type into a TypeScript equivalent.
 // Named types (such as non-anonymous structs or enums) are extracted into new top levels declarations
-func (d handler) analyseType(typ types.Type) tsType {
+func (d handler) AnalyseType(typ types.Type) Type {
 	if typ == nil {
 		return TsAny
 	}
@@ -105,7 +105,7 @@ func (d handler) analyseType(typ types.Type) tsType {
 		}
 
 		// otherwise, extract underlying type and look for structs
-		underlyingTsType := d.analyseType(typ.Underlying())
+		underlyingTsType := d.AnalyseType(typ.Underlying())
 		if st, isObject := underlyingTsType.(TsObject); isObject {
 			st.origin = origin
 			st.name_ = finalName
@@ -120,20 +120,20 @@ func (d handler) analyseType(typ types.Type) tsType {
 		return analyseBasicType(typ)
 	case *types.Pointer:
 		// indirection
-		return d.analyseType(typ.Elem())
+		return d.AnalyseType(typ.Elem())
 	case *types.Struct:
 		fields, embedded := d.convertFields(typ)
 		return TsObject{fields: fields, embeded: embedded}
 	case *types.Array:
-		valueTsType := d.analyseType(typ.Elem())
+		valueTsType := d.AnalyseType(typ.Elem())
 		return TsArray{elem: valueTsType}
 	case *types.Slice:
-		valueTsType := d.analyseType(typ.Elem())
-		return NullableTsType{tsType: TsArray{elem: valueTsType}}
+		valueTsType := d.AnalyseType(typ.Elem())
+		return NullableTsType{Type: TsArray{elem: valueTsType}}
 	case *types.Map:
-		return NullableTsType{tsType: TsMap{
-			key:  d.analyseType(typ.Key()),
-			elem: d.analyseType(typ.Elem()),
+		return NullableTsType{Type: TsMap{
+			key:  d.AnalyseType(typ.Key()),
+			elem: d.AnalyseType(typ.Elem()),
 		}}
 	}
 	// unhandled type:

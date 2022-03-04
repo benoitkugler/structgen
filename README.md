@@ -1,6 +1,6 @@
 # structgen [![GoDoc](https://godoc.org/github.com/benoitkugler/structgen?status.svg)](https://godoc.org/github.com/benoitkugler/structgen)
 
-An extremely simple and powerful Go to {Typescript, Dart} definitions.
+A simple and powerful Go to {Typescript, Dart} definitions.
 
 Inspired by [OneOfOne/structgen](https://github.com/OneOfOne/structgen), but build with [go/types](https://golang.org/pkg/go/types).
 

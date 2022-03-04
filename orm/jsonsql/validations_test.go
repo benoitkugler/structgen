@@ -30,5 +30,5 @@ func TestValidations(t *testing.T) {
 			l = append(l, jsonT.Validations()...)
 		}
 	}
-	_ = ioutil.WriteFile("test/valid.sql", []byte(loader.Render(l)), os.ModePerm)
+	_ = ioutil.WriteFile("test/valid.sql", []byte(loader.ToString(l)), os.ModePerm)
 }

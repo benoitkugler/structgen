@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	darttypes "github.com/benoitkugler/structgen/dart-types"
 	"github.com/benoitkugler/structgen/data"
 	"github.com/benoitkugler/structgen/enums"
+	"github.com/benoitkugler/structgen/formatter"
 	"github.com/benoitkugler/structgen/interfaces"
 	"github.com/benoitkugler/structgen/loader"
 	"github.com/benoitkugler/structgen/orm/composites"
@@ -47,61 +47,9 @@ func (i *Modes) Set(value string) error {
 	return nil
 }
 
-var hasGoFmt, hasDartFmt, hasTsFmt *bool
-
-// check if the goimports command is working
-func hasGoFormatter() bool {
-	if hasGoFmt == nil {
-		err := exec.Command("which", "goimports").Run()
-		if err != nil {
-			log.Printf("no formatter for Go (%s)", err)
-		} else {
-			log.Println("formatter for Go detected")
-		}
-		hasGoFmt = new(bool)
-		*hasGoFmt = err == nil
-	}
-	return *hasGoFmt
-}
-
-// check if the dart command is working
-func hasDartFormatter() bool {
-	if hasDartFmt == nil {
-		err := exec.Command("dart", "format", "--help").Run()
-		if err != nil {
-			log.Printf("no formatter for Dart (%s)", err)
-		} else {
-			log.Println("formatter for Dart detected")
-		}
-		hasDartFmt = new(bool)
-		*hasDartFmt = err == nil
-	}
-	return *hasDartFmt
-}
-
-// check if the prettier command is working
-func hasTypescriptFormatter() bool {
-	if hasTsFmt == nil {
-		err := exec.Command("npx", "prettier", "-v").Run()
-		if err != nil {
-			log.Printf("no formatter for Typescript (%s)", err)
-		} else {
-			log.Println("formatter for Typescript detected")
-		}
-		hasTsFmt = new(bool)
-		*hasTsFmt = err == nil
-	}
-	return *hasTsFmt
-}
+var fmts formatter.Formatters
 
 func main() {
-	const (
-		noFormat = iota
-		formatGo
-		formatDart
-		formatTs
-	)
-
 	source := flag.String("source", "", "go source file to convert")
 	var modes Modes
 	flag.Var(&modes, "mode", "list of modes <mode>:<output>")
@@ -133,35 +81,35 @@ func main() {
 	for _, m := range modes {
 		var (
 			typeHandler loader.Handler
-			format      int // format if true
+			format      formatter.Format // format if true
 		)
 		switch m.mode {
 		case "ts":
 			typeHandler = tstypes.NewHandler(en)
-			format = formatTs
+			format = formatter.Ts
 		case "dart":
 			typeHandler = darttypes.NewHandler(en)
-			format = formatDart
+			format = formatter.Dart
 		case "itfs-json":
 			typeHandler = interfaces.NewHandler(packageName)
-			format = formatGo
+			format = formatter.Go
 		case "rand":
 			typeHandler = data.NewHandler(packageName, en)
-			format = formatGo
+			format = formatter.Go
 		case "sql":
 			typeHandler = crud.NewHandler(packageName, false)
-			format = formatGo
+			format = formatter.Go
 		case "sql_test":
 			typeHandler = crud.NewHandler(packageName, true)
-			format = formatGo
+			format = formatter.Go
 		case "sql_gen":
 			typeHandler = creation.NewGenHandler(en)
 		case "sql_composite":
 			typeHandler = &composites.Composites{OriginPackageName: packageName}
-			format = formatGo
+			format = formatter.Go
 		case "enums":
 			typeHandler = enums.Handler{PackageName: packageName, Enums: en}
-			format = formatGo
+			format = formatter.Go
 		default:
 			log.Printf("mode %s not supported - skipping \n", m.mode)
 		}
@@ -185,21 +133,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		switch format {
-		case formatGo:
-			if hasGoFormatter() {
-				err = exec.Command("goimports", "-w", m.output).Run()
-			}
-		case formatDart:
-			if hasDartFormatter() {
-				err = exec.Command("dart", "format", m.output).Run()
-			}
-		case formatTs:
-			if hasGoFormatter() {
-				err = exec.Command("npx", "prettier", "--write", m.output).Run()
-			}
-		}
-
+		err = fmts.FormatFile(format, m.output)
 		if err != nil {
 			log.Fatalf("formatting failed: generated code is probably incorrect: %s", err)
 		}
