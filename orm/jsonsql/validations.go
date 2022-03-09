@@ -194,7 +194,7 @@ const vStruct = `
 
 // to work around possible hash collision,
 // we need to be able to check if an hash is already taken
-var structIdsTable = map[uint32]Struct{}
+var structIDsTable = map[uint32]Struct{}
 
 func (b Struct) dump() []byte {
 	var data []byte
@@ -207,13 +207,13 @@ func (b Struct) dump() []byte {
 
 func (b Struct) Id() string {
 	ha := adler32.Checksum(b.dump())
-	if otherStruct, ok := structIdsTable[ha]; ok {
+	if otherStruct, ok := structIDsTable[ha]; ok {
 		if !bytes.Equal(b.dump(), otherStruct.dump()) {
 			// we have a very unlikely collision
 			panic("collision in hash function for structs: try to re-order fields")
 		}
 	}
-	structIdsTable[ha] = b
+	structIDsTable[ha] = b
 	return fmt.Sprintf("struct_%d", ha)
 }
 

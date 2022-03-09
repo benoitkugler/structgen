@@ -12,6 +12,7 @@ type SQLType struct {
 	IsNullable bool
 	Type       sqlType
 	JSON       jsonsql.TypeJSON // might be null
+	GoName     string
 }
 
 func (s SQLType) Declaration(field string) string {

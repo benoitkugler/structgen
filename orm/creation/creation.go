@@ -30,6 +30,10 @@ func (t TableGen) Render() []loader.Declaration {
 		fieldsDecl[i] = "\t" + f.CreateStmt()
 		fieldsName[i] = f.SQLName
 	}
+
+	// json validation first
+	out := t.jsonValidations()
+
 	decl := loader.Declaration{
 		Id: t.Name,
 		Content: fmt.Sprintf(`
@@ -38,7 +42,7 @@ CREATE TABLE %s (
 );`, t.TableName(), strings.Join(fieldsDecl, ",\n")),
 	}
 
-	return append([]loader.Declaration{decl}, t.jsonValidations()...)
+	return append(out, decl)
 }
 
 // add the json validation functions

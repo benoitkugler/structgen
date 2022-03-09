@@ -9,11 +9,12 @@ import (
 )
 
 type SQLField struct {
-	GoName   string
-	SQLName  string
-	Type     sqltypes.SQLType
-	Exported bool
-	goTag    reflect.StructTag // struct field tag
+	GoName     string
+	SQLName    string
+	Type       sqltypes.SQLType
+	Exported   bool
+	goTag      reflect.StructTag // struct field tag
+	GoTypeName string
 }
 
 func (s SQLField) IsPrimary() bool {

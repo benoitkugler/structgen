@@ -48,8 +48,8 @@ func Select{{ .Name }}s(tx DB, ids ...int64) ({{ .Name }}s, error) {
 
 type {{.Name}}s map[int64]{{.Name}}
 
-func (m {{.Name}}s) Ids() Ids {
-	out := make(Ids, 0, len(m))
+func (m {{.Name}}s) IDs() IDs {
+	out := make(IDs, 0, len(m))
 	for i := range m {
 		out = append(out, i)
 	}
@@ -112,12 +112,12 @@ func Delete{{ .Name }}ById(tx DB, id int64) ({{ .Name }}, error) {
 }
 
 // Deletes the {{ .Name }} in the database and returns the ids.
-func Delete{{ .Name }}sByIds(tx DB, ids ...int64) (Ids, error) {
+func Delete{{ .Name }}sByIDs(tx DB, ids ...int64) (IDs, error) {
 	rows, err := tx.Query("DELETE FROM {{ snake .Name }}s WHERE id = ANY($1) RETURNING id", pq.Int64Array(ids))
 	if err != nil {
 		return nil, err
 	}
-	return ScanIds(rows)
+	return ScanIDs(rows)
 }	
 `))
 
@@ -244,12 +244,12 @@ func Select{{ $.Name }}sBy{{ .GoName }}s(tx DB, {{ varname .GoName }}s ...int64)
 }	
 
 {{ if $.HasID }}
-func Delete{{ $.Name }}sBy{{ .GoName }}s(tx DB, {{ varname .GoName }}s ...int64) (Ids, error) {
+func Delete{{ $.Name }}sBy{{ .GoName }}s(tx DB, {{ varname .GoName }}s ...int64) (IDs, error) {
 	rows, err := tx.Query("DELETE FROM {{ snake $.Name }}s WHERE {{ .SQLName }} = ANY($1) RETURNING id", pq.Int64Array({{ varname .GoName}}s))
 	if err != nil {
 		return nil, err
 	}
-	return ScanIds(rows)
+	return ScanIDs(rows)
 }	
 {{ else }}
 func Delete{{ $.Name }}sBy{{ .GoName }}s(tx DB, {{ varname .GoName }}s ...int64) ({{ $.Name }}s, error)  {
@@ -279,7 +279,7 @@ func queries{{.Name}}(tx *sql.Tx, item {{.Name}}) ({{.Name}}, error) {
 		return item, err
 	}
 	{{ if .HasID  }}
-		_ = items.Ids()
+		_ = items.IDs()
 	{{ else }}
 		_ = len(items)
 	{{ end }}

@@ -77,8 +77,13 @@ func extractStructFields(type_ *types.Struct, enums enums.EnumTable) []SQLField 
 			continue
 		}
 		goFieldName := field.Name()
-		sf := SQLField{GoName: goFieldName, SQLName: sqlFieldName, Type: sqltypes.NewSQLType(field.Type(), enums),
-			Exported: exported, goTag: reflect.StructTag(type_.Tag(i))}
+		sf := SQLField{
+			GoName:   goFieldName,
+			SQLName:  sqlFieldName,
+			Type:     sqltypes.NewSQLType(field.Type(), enums),
+			Exported: exported,
+			goTag:    reflect.StructTag(type_.Tag(i)),
+		}
 		out = append(out, sf)
 	}
 	return out

@@ -111,6 +111,7 @@ func NewSQLType(typ types.Type, enums enums.EnumTable) SQLType {
 			out = SQLType{Type: Enum{underlying: under, Type: enum}}
 		} else {
 			out = NewSQLType(typ.Underlying(), enums)
+			out.GoName = typ.Obj().Name()
 		}
 	default:
 		out = SQLType{Type: JSONB, IsNullable: false}

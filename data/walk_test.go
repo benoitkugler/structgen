@@ -25,7 +25,7 @@ func TestMain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := handler{PackageName: "models", EnumsTable: en}
+	h := NewHandler("models", en)
 	decls, err := loader.WalkFile(fullPath, pkg, h)
 	if err != nil {
 		t.Fatal(err)
