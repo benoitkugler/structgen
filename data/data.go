@@ -42,6 +42,8 @@ func (f FnBasic) Render() []loader.Declaration {
 		code = fnBool()
 	case types.Int:
 		code = fnInt("int")
+	case types.Rune:
+		code = fnInt("rune")
 	case types.Int64:
 		code = fnInt("int64")
 	case types.Uint8:
