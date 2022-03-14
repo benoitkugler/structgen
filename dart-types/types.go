@@ -72,11 +72,12 @@ func (cl class) name() string       { return cl.name_ }
 func (cl class) functionId() string { return lowerFirst(cl.name_) }
 
 func (cl *class) Render() (out []loader.Declaration) {
-	var fields, initFields []string
+	var fields, initFields, interpolatedFields []string
 	for _, field := range cl.fields {
 		out = append(out, field.type_.Render()...)
 		fields = append(fields, fmt.Sprintf("final %s %s;", field.type_.name(), field.dartName()))
 		initFields = append(initFields, fmt.Sprintf("this.%s", field.dartName()))
+		interpolatedFields = append(interpolatedFields, fmt.Sprintf("$%s", field.dartName()))
 	}
 
 	var implements string
@@ -91,11 +92,17 @@ func (cl *class) Render() (out []loader.Declaration) {
 		%s
 
 		const %s(%s);
+
+		@override
+		String toString() {
+			return "%s(%s)";
+		}
 		}
 		
 		%s
 	`, cl.origin, cl.name_, implements,
 			strings.Join(fields, "\n"), cl.name_, strings.Join(initFields, ", "),
+			cl.name_, strings.Join(interpolatedFields, ", "),
 			cl.json(),
 		),
 	}
