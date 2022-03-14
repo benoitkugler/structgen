@@ -235,6 +235,17 @@ func (e enum) Render() []loader.Declaration {
 	return []loader.Declaration{{Id: e.enum.Name, Content: content}}
 }
 
+type imported struct {
+	name_      string
+	importPath string
+}
+
+func (n imported) name() string       { return n.name_ }
+func (n imported) functionId() string { return lowerFirst(n.name_) }
+
+// special cased in Header(); since dart imports must come first
+func (n imported) Render() []loader.Declaration { return nil }
+
 // named refers to a previously declared type
 type named struct {
 	underlying dartType

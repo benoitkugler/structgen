@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'gen.dart';
 
 main(List<String> args) {
-  final m = model(concret1([1, 2, -1], 4), 8, [concret2(0.4), concret2(0.8)]);
+  final m = Model(Concret1([1, 2, -1], 4), 8, [Concret2(0.4), Concret2(0.8)]);
   final json = modelToJson(m);
   final s = jsonEncode(json);
   print(s);

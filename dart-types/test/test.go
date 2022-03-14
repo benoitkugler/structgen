@@ -1,5 +1,7 @@
 package test
 
+import "context"
+
 type concret1 struct {
 	List2 []int
 	V     int
@@ -28,3 +30,8 @@ type model struct {
 }
 
 type ListV []itfName
+
+type withExternalRef struct {
+	Field1 context.Context `dart-extern:"extern.dart"`
+	Field2 context.Context `dart-extern:"extern.dart"`
+}
