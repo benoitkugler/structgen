@@ -19,9 +19,9 @@ func (b basic) json() string {
 	case dartString, dartBool, dartFloat, dartInt, dartAny:
 		return fmt.Sprintf(`%s %sFromJson(dynamic json) => json as %s;
 		
-		dynamic %sToJson(%s item) => item;
+		%s %sToJson(%s item) => item;
 		
-		`, b, b.functionId(), b, b.functionId(), b)
+		`, b, b.functionId(), b, b, b.functionId(), b)
 	case dartTime:
 		return `DateTime dateTimeFromJson(dynamic json) => DateTime.parse(json as String);
 
@@ -55,7 +55,7 @@ func (l list) json() string {
 		return (json as List<dynamic>).map(%sFromJson).toList();
 	}
 
-	dynamic %sToJson(%s item) {
+	List<dynamic> %sToJson(%s item) {
 		return item.map(%sToJson).toList();
 	}
 	`, l.name(), l.functionId(), l.element.functionId(),
@@ -77,8 +77,8 @@ func (d dict) json() string {
 		return (json as JSON).map((k,v) => MapEntry(%s, %sFromJson(v)));
 	}
 	
-	dynamic %sToJson(%s item) {
-		return item.map((k,v) => MapEntry(%sToJson(k), %sToJson(v)));
+	Map<String, dynamic> %sToJson(%s item) {
+		return item.map((k,v) => MapEntry(%sToJson(k).toString(), %sToJson(v)));
 	}
 	`, d.name(), d.functionId(), keyFromJson, d.element.functionId(),
 		d.functionId(), d.name(), d.key.functionId(), d.element.functionId())

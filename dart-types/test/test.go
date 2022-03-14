@@ -26,7 +26,9 @@ var (
 type model struct {
 	Value itfName
 	A     int
+	B     string
 	L     ListV
+	Dict  map[int]int
 }
 
 type ListV []itfName

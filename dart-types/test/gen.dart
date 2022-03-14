@@ -6,7 +6,7 @@ typedef JSON = Map<String, dynamic>; // alias to shorten JSON convertors
 
 int intFromJson(dynamic json) => json as int;
 
-dynamic intToJson(int item) => item;
+int intToJson(int item) => item;
 
 List<int> listIntFromJson(dynamic json) {
   if (json == null) {
@@ -15,7 +15,7 @@ List<int> listIntFromJson(dynamic json) {
   return (json as List<dynamic>).map(intFromJson).toList();
 }
 
-dynamic listIntToJson(List<int> item) {
+List<dynamic> listIntToJson(List<int> item) {
   return item.map(intToJson).toList();
 }
 
@@ -43,7 +43,7 @@ JSON concret1ToJson(Concret1 item) {
 
 double doubleFromJson(dynamic json) => json as double;
 
-dynamic doubleToJson(double item) => item;
+double doubleToJson(double item) => item;
 
 // github.com/benoitkugler/structgen/dart-types/test.concret2
 class Concret2 implements ItfName {
@@ -99,38 +99,51 @@ List<ItfName> listItfNameFromJson(dynamic json) {
   return (json as List<dynamic>).map(itfNameFromJson).toList();
 }
 
-dynamic listItfNameToJson(List<ItfName> item) {
+List<dynamic> listItfNameToJson(List<ItfName> item) {
   return item.map(itfNameToJson).toList();
 }
 
 // github.com/benoitkugler/structgen/dart-types/test.ListV
 typedef ListV = List<ItfName>;
 
+Map<int, int> dictIntIntFromJson(dynamic json) {
+  if (json == null) {
+    return {};
+  }
+  return (json as JSON).map((k, v) => MapEntry(int.parse(k), intFromJson(v)));
+}
+
+Map<String, dynamic> dictIntIntToJson(Map<int, int> item) {
+  return item.map((k, v) => MapEntry(intToJson(k).toString(), intToJson(v)));
+}
+
 // github.com/benoitkugler/structgen/dart-types/test.model
 class Model {
   final ItfName value;
   final int a;
   final ListV l;
+  final Map<int, int> dict;
 
-  const Model(this.value, this.a, this.l);
+  const Model(this.value, this.a, this.l, this.dict);
 
   @override
   String toString() {
-    return "Model($value, $a, $l)";
+    return "Model($value, $a, $l, $dict)";
   }
 }
 
 Model modelFromJson(dynamic json_) {
   final json = (json_ as JSON);
   return Model(itfNameFromJson(json['Value']), intFromJson(json['A']),
-      listItfNameFromJson(json['L']));
+      listItfNameFromJson(json['L']), dictIntIntFromJson(json['Dict']));
 }
 
 JSON modelToJson(Model item) {
   return {
     "Value": itfNameToJson(item.value),
     "A": intToJson(item.a),
-    "L": listItfNameToJson(item.l)
+    "L": listItfNameToJson(item.l),
+    "Dict": dictIntIntToJson(item.dict)
   };
 }
 
