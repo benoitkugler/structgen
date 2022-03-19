@@ -214,20 +214,24 @@ func (e enum) Render() []loader.Declaration {
 		}
 		`, strings.Join(values, ", "), e.name(), e.name())
 	}
+
+	// labels are not used for now
+	// static const _labels = [
+	// 		%s
+	// 	];
+
+	// 	String label() { return _labels[index]; }
+
 	enumDecl := fmt.Sprintf(`enum  %s {
 		%s
 	}
 	
 	extension _%sExt on %s {
-		static const _labels = [
-			%s
-		];
 		
-		String label() { return _labels[index]; }
 
 		%s
 	}
-	`, e.name(), strings.Join(names, ", "), e.name(), e.name(), strings.Join(labels, ", "), fromValue)
+	`, e.name(), strings.Join(names, ", "), e.name(), e.name(), fromValue)
 
 	content := "// " + e.origin + "\n" + enumDecl
 	content += "\n" + e.json()
