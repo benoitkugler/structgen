@@ -16,7 +16,13 @@ func (n named) json() string {
 
 func (b basic) json() string {
 	switch b {
-	case dartString, dartBool, dartFloat, dartInt, dartAny:
+	case dartFloat: // use num to avoid issue with integers values
+		return `double doubleFromJson(dynamic json) => (json as num).toDouble();
+	
+	double doubleToJson(double item) => item;
+	
+	`
+	case dartString, dartBool, dartInt, dartAny:
 		return fmt.Sprintf(`%s %sFromJson(dynamic json) => json as %s;
 		
 		%s %sToJson(%s item) => item;
