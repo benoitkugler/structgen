@@ -41,7 +41,7 @@ JSON concret1ToJson(Concret1 item) {
   return {"List2": listIntToJson(item.list2), "V": intToJson(item.v)};
 }
 
-double doubleFromJson(dynamic json) => json as double;
+double doubleFromJson(dynamic json) => (json as num).toDouble();
 
 double doubleToJson(double item) => item;
 
@@ -106,6 +106,10 @@ List<dynamic> listItfNameToJson(List<ItfName> item) {
 // github.com/benoitkugler/structgen/dart-types/test.ListV
 typedef ListV = List<ItfName>;
 
+String stringFromJson(dynamic json) => json as String;
+
+String stringToJson(String item) => item;
+
 Map<int, int> dictIntIntFromJson(dynamic json) {
   if (json == null) {
     return {};
@@ -121,30 +125,68 @@ Map<String, dynamic> dictIntIntToJson(Map<int, int> item) {
 class Model {
   final ItfName value;
   final int a;
+  final String b;
   final ListV l;
   final Map<int, int> dict;
 
-  const Model(this.value, this.a, this.l, this.dict);
+  const Model(this.value, this.a, this.b, this.l, this.dict);
 
   @override
   String toString() {
-    return "Model($value, $a, $l, $dict)";
+    return "Model($value, $a, $b, $l, $dict)";
   }
 }
 
 Model modelFromJson(dynamic json_) {
   final json = (json_ as JSON);
-  return Model(itfNameFromJson(json['Value']), intFromJson(json['A']),
-      listItfNameFromJson(json['L']), dictIntIntFromJson(json['Dict']));
+  return Model(
+      itfNameFromJson(json['Value']),
+      intFromJson(json['A']),
+      stringFromJson(json['B']),
+      listItfNameFromJson(json['L']),
+      dictIntIntFromJson(json['Dict']));
 }
 
 JSON modelToJson(Model item) {
   return {
     "Value": itfNameToJson(item.value),
     "A": intToJson(item.a),
+    "B": stringToJson(item.b),
     "L": listItfNameToJson(item.l),
     "Dict": dictIntIntToJson(item.dict)
   };
+}
+
+List<Node> listNodeFromJson(dynamic json) {
+  if (json == null) {
+    return [];
+  }
+  return (json as List<dynamic>).map(nodeFromJson).toList();
+}
+
+List<dynamic> listNodeToJson(List<Node> item) {
+  return item.map(nodeToJson).toList();
+}
+
+// github.com/benoitkugler/structgen/dart-types/test.node
+class Node {
+  final List<Node> children;
+
+  const Node(this.children);
+
+  @override
+  String toString() {
+    return "Node($children)";
+  }
+}
+
+Node nodeFromJson(dynamic json_) {
+  final json = (json_ as JSON);
+  return Node(listNodeFromJson(json['Children']));
+}
+
+JSON nodeToJson(Node item) {
+  return {"Children": listNodeToJson(item.children)};
 }
 
 // github.com/benoitkugler/structgen/dart-types/test.withExternalRef

@@ -37,3 +37,7 @@ type withExternalRef struct {
 	Field1 context.Context `dart-extern:"extern.dart"`
 	Field2 context.Context `dart-extern:"extern.dart"`
 }
+
+type node struct {
+	Children []node
+}

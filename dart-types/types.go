@@ -66,15 +66,23 @@ type class struct {
 	name_      string // needed for constructors
 	fields     []classField
 	interfaces []string // interfaces implemented
+
+	renderCache map[dartType]bool
 }
 
 func (cl class) name() string       { return cl.name_ }
 func (cl class) functionId() string { return lowerFirst(cl.name_) }
 
 func (cl *class) Render() (out []loader.Declaration) {
+	if cl.renderCache[cl] {
+		return nil
+	}
+	cl.renderCache[cl] = true
 	var fields, initFields, interpolatedFields []string
 	for _, field := range cl.fields {
-		out = append(out, field.type_.Render()...)
+		if field.type_.name() != cl.name_ {
+			out = append(out, field.type_.Render()...)
+		}
 		fields = append(fields, fmt.Sprintf("final %s %s;", field.type_.name(), field.dartName()))
 		initFields = append(initFields, fmt.Sprintf("this.%s", field.dartName()))
 		interpolatedFields = append(interpolatedFields, fmt.Sprintf("$%s", field.dartName()))
