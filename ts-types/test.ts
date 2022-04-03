@@ -89,7 +89,7 @@ export interface Plage {
   from: Date_;
   to: Date_;
 }
- 
+
 // github.com/benoitkugler/goACVE/server/core/rawdata.OptionSemaineCamp
 export interface OptionSemaineCamp {
   plage_1: Plage;
@@ -935,8 +935,6 @@ export interface User {
 }
 
 interface Itf {
-    Kind: number;
-    Data: User | Modules
-} 
-
- 
+  Kind: number;
+  Data: User | Modules;
+}

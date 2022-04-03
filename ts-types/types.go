@@ -2,6 +2,8 @@ package tstypes
 
 import (
 	"fmt"
+	"go/types"
+	"strings"
 
 	"github.com/benoitkugler/structgen/enums"
 	tsEnums "github.com/benoitkugler/structgen/enums/ts"
@@ -23,12 +25,12 @@ type Type interface {
 	Name() string
 }
 
-// NullableTsType wraps a type, making him nullable.
-type NullableTsType struct {
+// nullableTsType wraps a type, making him nullable.
+type nullableTsType struct {
 	Type
 }
 
-func (t NullableTsType) Name() string {
+func (t nullableTsType) Name() string {
 	return t.Type.Name() + " | null"
 }
 
@@ -79,15 +81,15 @@ func (t tsBasic) Render() []loader.Declaration {
 
 func (t tsBasic) Name() string { return string(t) }
 
-// TsNamedType represents a defined user type,
+// namedType represents a defined user type,
 // appart from enums and structs.
-type TsNamedType struct {
+type namedType struct {
 	underlying Type
 	origin     string
 	name_      string
 }
 
-func (named TsNamedType) Render() []loader.Declaration {
+func (named namedType) Render() []loader.Declaration {
 	deps := named.underlying.Render()
 
 	code := fmt.Sprintf(`// %s
@@ -97,44 +99,44 @@ func (named TsNamedType) Render() []loader.Declaration {
 	return deps
 }
 
-func (t TsNamedType) Name() string { return t.name_ }
+func (t namedType) Name() string { return t.name_ }
 
-// TsMap represents a mapping object
-type TsMap struct {
+// dict represents a mapping object
+type dict struct {
 	key  Type
 	elem Type
 }
 
-func (t TsMap) Render() []loader.Declaration {
+func (t dict) Render() []loader.Declaration {
 	// the map itself has no additional declarations
 	return append(t.key.Render(), t.elem.Render()...)
 }
 
-func (t TsMap) Name() string {
+func (t dict) Name() string {
 	return fmt.Sprintf("{ [key: %s]: %s }", t.key.Name(), t.elem.Name())
 }
 
-// TsArray represents an array
-type TsArray struct {
+// array represents an array
+type array struct {
 	elem Type
 }
 
-func (t TsArray) Render() []loader.Declaration {
+func (t array) Render() []loader.Declaration {
 	// the array itself has no additional declarations
 	return t.elem.Render()
 }
 
-func (t TsArray) Name() string {
+func (t array) Name() string {
 	return t.elem.Name() + "[]"
 }
 
-// TsEnum represents an enum type
-type TsEnum struct {
+// enumT represents an enum type
+type enumT struct {
 	origin string
 	enum   enums.Type
 }
 
-func (t TsEnum) Render() []loader.Declaration {
+func (t enumT) Render() []loader.Declaration {
 	return []loader.Declaration{{
 		Id: t.enum.Name,
 		Content: "// " + t.origin + "\n" +
@@ -142,25 +144,25 @@ func (t TsEnum) Render() []loader.Declaration {
 	}}
 }
 
-func (t TsEnum) Name() string { return t.enum.Name }
+func (t enumT) Name() string { return t.enum.Name }
 
-// StructField stores one propery of an object
-type StructField struct {
+// structField stores one propery of an object
+type structField struct {
 	Type Type
 	Name string
 }
 
-// TsObject represents an interface
-type TsObject struct {
+// class represents an interface
+type class struct {
 	origin  string
 	name_   string
-	fields  []StructField
+	fields  []structField
 	embeded []Type
 }
 
-func (t TsObject) Name() string { return t.name_ }
+func (t class) Name() string { return t.name_ }
 
-func (t TsObject) Render() (decls []loader.Declaration) {
+func (t class) Render() (decls []loader.Declaration) {
 	out := "// " + t.origin + "\n"
 
 	if len(t.embeded) == 0 { // prefer interface syntax
@@ -182,3 +184,37 @@ func (t TsObject) Render() (decls []loader.Declaration) {
 	decls = append(decls, loader.Declaration{Id: t.name_, Content: out})
 	return decls
 }
+
+type union struct {
+	origin  string
+	name_   string
+	type_   *types.Interface
+	members []Type // completed after analysis
+}
+
+func (u *union) Render() []loader.Declaration {
+	var (
+		members  []string
+		kindEnum []string
+	)
+	enumKindName := u.name_ + "Kind"
+	for i, m := range u.members {
+		members = append(members, m.Name())
+		kindEnum = append(kindEnum, fmt.Sprintf("%s = %d", m.Name(), i))
+	}
+	code := fmt.Sprintf(`
+	export enum %s {
+		%s
+	}
+	
+	export interface %s {
+		Kind: %s
+		Data: %s
+	}`, enumKindName, strings.Join(kindEnum, ",\n"), u.name_, enumKindName, strings.Join(members, " | "))
+
+	return []loader.Declaration{
+		{Id: u.name_, Content: code},
+	}
+}
+
+func (u *union) Name() string { return u.name_ }
