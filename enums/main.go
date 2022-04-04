@@ -60,12 +60,20 @@ func (e Type) AsTuple() string {
 
 // AsArray returns the code for a Go array
 // containing all values.
-func (e Type) AsArray() string {
+// If originPackage is not empty, it is prepended to the variable names.
+func (e Type) AsArray(originPackage string) string {
 	chunks := make([]string, len(e.Values))
 	for i, val := range e.Values {
 		chunks[i] = val.VarName
+		if originPackage != "" {
+			chunks[i] = originPackage + "." + chunks[i]
+		}
 	}
-	return fmt.Sprintf("[...]%s{%s}", e.Name, strings.Join(chunks, ", "))
+	name := e.Name
+	if originPackage != "" {
+		name = originPackage + "." + name
+	}
+	return fmt.Sprintf("[...]%s{%s}", name, strings.Join(chunks, ", "))
 }
 
 // FetchEnums looks for an "enums.go" ending file in the package

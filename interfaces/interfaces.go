@@ -3,9 +3,7 @@
 package interfaces
 
 import (
-	"bytes"
 	"fmt"
-	"go/format"
 	"go/types"
 	"sort"
 
@@ -27,13 +25,17 @@ func (itf Interface) hasMember(typ *types.Named) bool {
 	return false
 }
 
-// Interfaces exposes the relation between types and interfaces
-// in the parsed code.
-type Interfaces []Interface
+// Render returns the JSON routine functions
+func (itf Interface) Render() []loader.Declaration {
+	return []loader.Declaration{{
+		Id:      itf.Name.Obj().Name(),
+		Content: itf.json(),
+	}}
+}
 
 // Implements returns the interface names implemented by `typ`
-func (itfs Interfaces) Implements(typ *types.Named) (interfaces []string) {
-	for _, itf := range itfs {
+func (an *Analyzer) Implements(typ *types.Named) (interfaces []string) {
+	for _, itf := range an.Itfs() {
 		if itf.hasMember(typ) {
 			interfaces = append(interfaces, itf.Name.Obj().Name())
 		}
@@ -45,25 +47,34 @@ var _ loader.Handler = (*handler)(nil)
 
 // Analyzer may be used to handle interface types.
 type Analyzer struct {
-	interfaces map[*types.Named]bool // with underlying type *types.Interface
-	types      map[*types.Named]bool
+	pkgNamedTypes []*types.Named
+	itfs          map[*types.Named]Interface
 }
 
-func NewAnalyser() Analyzer {
-	return Analyzer{
-		interfaces: make(map[*types.Named]bool),
-		types:      make(map[*types.Named]bool),
+func NewAnalyser(pkg *types.Scope) *Analyzer {
+	return &Analyzer{
+		pkgNamedTypes: allNamedTypes(pkg),
+		itfs:          make(map[*types.Named]Interface),
 	}
 }
 
-type handler struct {
-	analyzer Analyzer
+func (an *Analyzer) Itfs() (out []Interface) {
+	for _, v := range an.itfs {
+		out = append(out, v)
+	}
 
+	sort.Slice(out, func(i, j int) bool { return out[i].Name.Obj().Name() < out[j].Name.Obj().Name() })
+
+	return out
+}
+
+type handler struct {
+	analyzer    *Analyzer
 	packageName string
 }
 
-func NewHandler(packageName string) loader.Handler {
-	return handler{packageName: packageName, analyzer: NewAnalyser()}
+func NewHandler(packageName string, pkg *types.Package) loader.Handler {
+	return &handler{packageName: packageName, analyzer: NewAnalyser(pkg.Scope())}
 }
 
 func (handler) HandleComment(loader.Comment) error { return nil }
@@ -78,63 +89,119 @@ func (h handler) Header() string {
 }
 
 func (h handler) Footer() string {
-	var out bytes.Buffer
-	for _, itf := range h.analyzer.Process() {
-		out.WriteString(itf.json())
-		out.WriteByte('\n')
-	}
-
-	b, err := format.Source(out.Bytes())
-	if err != nil {
-		return out.String()
-	}
-	return string(b)
+	return ""
 }
 
 // HandleType implements loader.Handler, but always return a nil value.
-func (h handler) HandleType(typ types.Type) loader.Type {
-	h.analyzer.HandleType(typ)
+func (h *handler) HandleType(typ types.Type) loader.Type {
+	switch under := typ.Underlying().(type) {
+	case *types.Struct:
+		var out class
+		for i := 0; i < under.NumFields(); i++ {
+			if itf := h.HandleType(under.Field(i).Type()); itf != nil {
+				out.fields = append(out.fields, itf)
+			}
+		}
+		return out
+	case *types.Slice:
+		itf, isItf := h.analyzer.NewInterface(under.Elem())
+		if isItf {
+			named, ok := typ.(*types.Named)
+			if !ok {
+				panic(fmt.Sprintf("type []%s is not name", itf.Name.Obj().Name()))
+			}
+			return itfSlice{name: named.Obj().Name(), elem: itf}
+		}
+	}
+	itf, isItf := h.analyzer.NewInterface(typ)
+	if isItf {
+		return itf
+	}
+
 	return nil
 }
 
-// HandleType adds `typ` to types to analyse.
-// It is only useful for Named and Interfaces.
-func (an Analyzer) HandleType(typ types.Type) {
+// NewInterface adds `typ` to types to analyse.
+// It is only useful for Interfaces.
+func (an *Analyzer) NewInterface(typ types.Type) (Interface, bool) {
 	named, ok := typ.(*types.Named)
 	if !ok { // we do not support anonymous interfaces
-		return
+		return Interface{}, false
 	}
 
-	// do not add the interface as member of itself
-	if _, isItf := typ.Underlying().(*types.Interface); isItf {
-		an.interfaces[named] = true
-	} else {
-		an.types[named] = true
+	if _, isItf := typ.Underlying().(*types.Interface); !isItf {
+		return Interface{}, false
 	}
+
+	if itf, has := an.itfs[named]; has {
+		return itf, true
+	}
+	itf := an.processITF(named)
+	an.itfs[named] = itf
+	return itf, true
 }
 
-// Process uses the accumulated types to find
-// the interfaces and their members.
-func (an Analyzer) Process() Interfaces {
-	var out Interfaces
-	for namedITF := range an.interfaces {
-		itf := namedITF.Underlying().(*types.Interface)
+// // Process uses the accumulated types to find
+// // the interfaces and their members.
+// func (an Analyzer) Process(pkg *types.Package) Interfaces {
+// 	types_ := allNamedTypes(pkg)
 
-		item := Interface{Name: namedITF}
-		for t := range an.types {
-			if types.Implements(t, itf) {
-				item.Members = append(item.Members, t)
-			}
+// 	var out Interfaces
+// 	for namedITF := range an.interfaces {
+// 		itf := namedITF.Underlying().(*types.Interface)
+
+// 		item := Interface{Name: namedITF}
+// 		for _, t := range types_ {
+// 			if types.Implements(t, itf) {
+// 				item.Members = append(item.Members, t)
+// 			}
+// 		}
+
+// 		sort.Slice(item.Members, func(i, j int) bool {
+// 			return item.Members[i].Obj().Name() < item.Members[j].Obj().Name()
+// 		})
+
+// 		out = append(out, item)
+// 	}
+
+// 	sort.Slice(out, func(i, j int) bool { return out[i].Name.Obj().Name() < out[j].Name.Obj().Name() })
+
+// 	return out
+// }
+
+// processITF uses the accumulated types to find
+// the interfaces and their members.
+func (an *Analyzer) processITF(namedITF *types.Named) Interface {
+	itf := namedITF.Underlying().(*types.Interface)
+
+	item := Interface{Name: namedITF}
+	for _, t := range an.pkgNamedTypes {
+		// do not add the interface as member of itself
+		if _, isItf := t.Underlying().(*types.Interface); isItf {
+			continue
 		}
 
-		sort.Slice(item.Members, func(i, j int) bool {
-			return item.Members[i].Obj().Name() < item.Members[j].Obj().Name()
-		})
-
-		out = append(out, item)
+		if types.Implements(t, itf) {
+			item.Members = append(item.Members, t)
+		}
 	}
 
-	sort.Slice(out, func(i, j int) bool { return out[i].Name.Obj().Name() < out[j].Name.Obj().Name() })
+	sort.Slice(item.Members, func(i, j int) bool {
+		return item.Members[i].Obj().Name() < item.Members[j].Obj().Name()
+	})
+	return item
+}
 
+func allNamedTypes(scope *types.Scope) (out []*types.Named) {
+	for _, name := range scope.Names() {
+		obj, ok := scope.Lookup(name).(*types.TypeName)
+		if !ok {
+			continue
+		}
+
+		if named, isNamed := obj.Type().(*types.Named); isNamed {
+			out = append(out, named)
+		}
+	}
 	return out
 }

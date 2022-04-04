@@ -2,6 +2,7 @@ package gents
 
 import (
 	"fmt"
+	"go/token"
 	"go/types"
 	"net/http"
 	"testing"
@@ -30,7 +31,7 @@ func TestGenerate(t *testing.T) {
 			},
 		},
 	}
-	fmt.Println(apis.Render(nil))
+	fmt.Println(apis.Render(nil, types.NewScope(nil, token.NoPos, token.NoPos, "")))
 }
 
 func TestGenerateMaps(t *testing.T) {
@@ -43,5 +44,5 @@ func TestGenerateMaps(t *testing.T) {
 			Return:      types.NewMap(types.Typ[types.String], types.NewSlice(types.Typ[types.Int])),
 		},
 	}
-	fmt.Println(api.generateMethod())
+	fmt.Println(api.generateMethod(types.NewScope(nil, token.NoPos, token.NoPos, "")))
 }

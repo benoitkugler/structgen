@@ -53,3 +53,17 @@ func IsSpecialComment(comment string) (tag, content string) {
 	}
 	return "", ""
 }
+
+// TypeName returns the name of `type_` as it should appeared
+// when used in `targetPackage`
+func TypeName(targetPackage string, type_ types.Type) (full, originalPackage string) {
+	if named, isNamed := type_.(*types.Named); isNamed {
+		localName := named.Obj().Name()
+		packageName := named.Obj().Pkg().Name()
+		if packageName == targetPackage {
+			return localName, packageName
+		}
+		return packageName + "." + localName, packageName
+	}
+	return type_.String(), ""
+}

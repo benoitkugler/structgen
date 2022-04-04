@@ -20,13 +20,13 @@ func TestAnalyze(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := NewHandler("test")
+	h := NewHandler("test", pkg.Types)
 	decls, err := loader.WalkFile(fullPath, pkg, h)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	itfs := h.(handler).analyzer.Process()
+	itfs := h.(*handler).analyzer.Itfs()
 	if len(itfs) != 2 {
 		t.Fatal(itfs)
 	}
@@ -34,7 +34,7 @@ func TestAnalyze(t *testing.T) {
 		t.Fatal(itfs[0])
 	}
 	if len(itfs[0].Members) != 3 || len(itfs[1].Members) != 1 {
-		t.Fatal()
+		t.Fatal(itfs[0].Members, itfs[1].Members)
 	}
 
 	out, err := os.Create("test/gen.go")
@@ -51,5 +51,16 @@ func TestAnalyze(t *testing.T) {
 	err = exec.Command("goimports", "-w", "test/gen.go").Run()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestFetchAllTypes(t *testing.T) {
+	fn := "test/test.go"
+	pkg, err := loader.LoadSource(fn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(allNamedTypes(pkg.Types.Scope())) != 6+2 {
+		t.Fatal()
 	}
 }

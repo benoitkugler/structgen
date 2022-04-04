@@ -194,13 +194,15 @@ type union struct {
 
 func (u *union) Render() []loader.Declaration {
 	var (
-		members  []string
-		kindEnum []string
+		members     []string
+		kindEnum    []string
+		membersDecl []loader.Declaration
 	)
 	enumKindName := u.name_ + "Kind"
 	for i, m := range u.members {
 		members = append(members, m.Name())
 		kindEnum = append(kindEnum, fmt.Sprintf("%s = %d", m.Name(), i))
+		membersDecl = append(membersDecl, m.Render()...)
 	}
 	code := fmt.Sprintf(`
 	export enum %s {
@@ -212,9 +214,9 @@ func (u *union) Render() []loader.Declaration {
 		Data: %s
 	}`, enumKindName, strings.Join(kindEnum, ",\n"), u.name_, enumKindName, strings.Join(members, " | "))
 
-	return []loader.Declaration{
+	return append([]loader.Declaration{
 		{Id: u.name_, Content: code},
-	}
+	}, membersDecl...)
 }
 
 func (u *union) Name() string { return u.name_ }

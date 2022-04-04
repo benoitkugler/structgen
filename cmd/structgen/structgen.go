@@ -85,16 +85,16 @@ func main() {
 		)
 		switch m.mode {
 		case "ts":
-			typeHandler = tstypes.NewHandler(en)
+			typeHandler = tstypes.NewHandler(en, pkg.Types.Scope())
 			format = formatter.Ts
 		case "dart":
-			typeHandler = darttypes.NewHandler(en)
+			typeHandler = darttypes.NewHandler(en, pkg.Types)
 			format = formatter.Dart
 		case "itfs-json":
-			typeHandler = interfaces.NewHandler(packageName)
+			typeHandler = interfaces.NewHandler(packageName, pkg.Types)
 			format = formatter.Go
 		case "rand":
-			typeHandler = data.NewHandler(packageName, en)
+			typeHandler = data.NewHandler(packageName, en, pkg.Types)
 			format = formatter.Go
 		case "sql":
 			typeHandler = crud.NewHandler(packageName, false)

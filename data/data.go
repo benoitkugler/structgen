@@ -7,6 +7,7 @@ import (
 
 	"github.com/benoitkugler/structgen/enums"
 	"github.com/benoitkugler/structgen/loader"
+	"github.com/benoitkugler/structgen/utils"
 )
 
 var _ loader.Type = dataFunction(nil)
@@ -18,6 +19,11 @@ type dataFunction interface {
 	Id() string
 	Type() types.Type
 	Render() []loader.Declaration
+}
+
+func typeName(target string, typ types.Type) string {
+	n, _ := utils.TypeName(target, typ)
+	return n
 }
 
 type FnBasic struct {
@@ -114,18 +120,6 @@ func (f fnTime) Render() []loader.Declaration {
 		return time.Unix(int64(rand.Int31()), 5)
 	}
 	`}}
-}
-
-func typeName(targetPackage string, type_ types.Type) string {
-	if named, isNamed := type_.(*types.Named); isNamed {
-		localName := named.Obj().Name()
-		packageName := named.Obj().Pkg().Name()
-		if packageName == targetPackage {
-			return localName
-		}
-		return packageName + "." + localName
-	}
-	return type_.String()
 }
 
 type fnArray struct {
@@ -352,14 +346,17 @@ func (f fnEnum) Type() types.Type {
 }
 
 func (f fnEnum) Render() []loader.Declaration {
-	tn := typeName(f.TargetPackage, f.Type_)
+	tn, origin := utils.TypeName(f.TargetPackage, f.Type_)
+	if origin == f.TargetPackage {
+		origin = ""
+	}
 	return []loader.Declaration{{
 		Id: f.Id(), Content: fmt.Sprintf(`
 	func rand%s() %s {
 		choix := %s
 		i := rand.Intn(len(choix))
 		return choix[i]
-	}`, f.Id(), tn, f.Underlying.AsArray()),
+	}`, f.Id(), tn, f.Underlying.AsArray(origin)),
 	}}
 }
 
@@ -379,12 +376,16 @@ func (f fnInterface) Type() types.Type {
 }
 
 func (f fnInterface) Render() []loader.Declaration {
-	var choix []string
+	var (
+		choix       []string
+		membersDecl []loader.Declaration
+	)
 	for _, member := range f.members {
 		choix = append(choix, fmt.Sprintf("rand%s(),\n", member.Id()))
+		membersDecl = append(membersDecl, member.Render()...)
 	}
 
-	return []loader.Declaration{{
+	return append([]loader.Declaration{{
 		Id: f.Id(),
 		Content: fmt.Sprintf(`
 	func rand%s() %s {
@@ -396,5 +397,5 @@ func (f fnInterface) Render() []loader.Declaration {
 	}`, f.Id(), f.Id(), f.Id(),
 			strings.Join(choix, ""),
 			len(f.members)),
-	}}
+	}}, membersDecl...)
 }

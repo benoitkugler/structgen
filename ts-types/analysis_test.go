@@ -34,7 +34,7 @@ func TestMain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := NewHandler(et)
+	h := NewHandler(et, pkg.Types.Scope())
 	decls, err := loader.WalkFile(fullPath, pkg, h)
 	if err != nil {
 		t.Fatal(err)

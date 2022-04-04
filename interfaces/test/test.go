@@ -14,12 +14,10 @@ type member2 struct {
 	B int
 }
 
-type member3 struct {
-	C []string
-}
-
 type union2 interface {
 	isUnion2()
 }
 
 func (member1) isUnion2() {}
+
+type ITFSlice []union2
