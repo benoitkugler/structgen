@@ -65,5 +65,10 @@ func TypeName(targetPackage string, type_ types.Type) (full, originalPackage str
 		}
 		return packageName + "." + localName, packageName
 	}
-	return type_.String(), ""
+	return types.TypeString(type_, func(p *types.Package) string {
+		if p.Name() == targetPackage {
+			return ""
+		}
+		return p.Name()
+	}), ""
 }

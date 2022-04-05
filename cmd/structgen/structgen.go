@@ -135,7 +135,7 @@ func main() {
 
 		err = fmts.FormatFile(format, m.output)
 		if err != nil {
-			log.Fatalf("formatting failed: generated code is probably incorrect: %s", err)
+			log.Fatalf("formatting  %s failed: generated code is probably incorrect: %s", m.output, err)
 		}
 
 		log.Printf("Code for mode %s written in %s \n", m.mode, m.output)
