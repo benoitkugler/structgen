@@ -140,7 +140,7 @@ func (t enumT) Render() []loader.Declaration {
 	return []loader.Declaration{{
 		Id: t.enum.Name,
 		Content: "// " + t.origin + "\n" +
-			tsEnums.EnumAsTypeScript(t.enum),
+			"export " + tsEnums.EnumAsTypeScript(t.enum),
 	}}
 }
 
