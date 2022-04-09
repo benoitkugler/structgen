@@ -31,7 +31,7 @@ type nullableTsType struct {
 }
 
 func (t nullableTsType) Name() string {
-	return t.Type.Name() + " | null"
+	return fmt.Sprintf("(%s | null)", t.Type.Name())
 }
 
 var timesStringDefinition = loader.Declaration{
