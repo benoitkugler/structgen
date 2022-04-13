@@ -5,6 +5,7 @@ package data
 import (
 	"fmt"
 	"go/types"
+	"reflect"
 
 	"github.com/benoitkugler/structgen/enums"
 	"github.com/benoitkugler/structgen/interfaces"
@@ -70,6 +71,9 @@ func (d handler) Footer() string { return "" }
 func (d handler) convertFields(structType *types.Struct) (fields []structField) {
 	for i := 0; i < structType.NumFields(); i++ {
 		field := structType.Field(i)
+		if reflect.StructTag(structType.Tag(i)).Get("structgen-data") == "ignore" {
+			continue
+		}
 		dataFn := d.analyseType(field.Type())
 		fields = append(fields, structField{Name: field.Name(), Id: dataFn.Id(), type_: dataFn})
 	}

@@ -92,6 +92,18 @@ type namedType struct {
 func (named namedType) Render() []loader.Declaration {
 	deps := named.underlying.Render()
 
+	// class and union already have export definition
+	switch under := named.underlying.(type) {
+	case *class:
+		if named.name_ == under.name_ {
+			return deps
+		}
+	case *union:
+		if named.name_ == under.name_ {
+			return deps
+		}
+	}
+
 	code := fmt.Sprintf(`// %s
 	export type %s = %s`, named.origin, named.name_, named.underlying.Name())
 
@@ -158,11 +170,18 @@ type class struct {
 	name_   string
 	fields  []structField
 	embeded []Type
+
+	renderCache map[Type]bool
 }
 
 func (t class) Name() string { return t.name_ }
 
-func (t class) Render() (decls []loader.Declaration) {
+func (t *class) Render() (decls []loader.Declaration) {
+	if t.renderCache[t] {
+		return nil
+	}
+	t.renderCache[t] = true
+
 	out := "// " + t.origin + "\n"
 
 	if len(t.embeded) == 0 { // prefer interface syntax
