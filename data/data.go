@@ -175,7 +175,7 @@ func (f fnSlice) Render() []loader.Declaration {
 	decl := loader.Declaration{
 		Id: f.Id(), Content: fmt.Sprintf(`
 	func rand%s() []%s {
-		l := rand.Intn(10)
+		l := 40 + rand.Intn(10)
 		out := make([]%s, l)
 		for i := range out {
 			out[i] = rand%s()
@@ -211,7 +211,7 @@ func (f fnMap) Render() []loader.Declaration {
 	decl := loader.Declaration{
 		Id: f.Id(), Content: fmt.Sprintf(`
 	func rand%s() map[%s]%s {
-		l := rand.Intn(10)
+		l := 40 + rand.Intn(10)
 		out := make(map[%s]%s, l)
 		for i := 0; i < l; i++ {
 			out[rand%s()] = rand%s()
