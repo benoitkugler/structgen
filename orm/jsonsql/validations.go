@@ -1,9 +1,7 @@
 package jsonsql
 
 import (
-	"bytes"
 	"fmt"
-	"hash/adler32"
 	"strings"
 
 	"github.com/benoitkugler/structgen/loader"
@@ -203,18 +201,6 @@ func (b Struct) dump() []byte {
 		data = append(data, f.type_.Id()...)
 	}
 	return data
-}
-
-func (b Struct) Id() string {
-	ha := adler32.Checksum(b.dump())
-	if otherStruct, ok := structIDsTable[ha]; ok {
-		if !bytes.Equal(b.dump(), otherStruct.dump()) {
-			// we have a very unlikely collision
-			panic("collision in hash function for structs: try to re-order fields")
-		}
-	}
-	structIDsTable[ha] = b
-	return fmt.Sprintf("struct_%d", ha)
 }
 
 func (b Struct) Validations() (out []loader.Declaration) {

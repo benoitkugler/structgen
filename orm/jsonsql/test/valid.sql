@@ -81,7 +81,7 @@ $f$
 LANGUAGE 'plpgsql'
 IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION structgen_validate_json_struct_1883706743 (data jsonb)
+CREATE OR REPLACE FUNCTION structgen_validate_json_tes_DataType (data jsonb)
     RETURNS boolean
     AS $f$
 BEGIN
@@ -98,6 +98,29 @@ BEGIN
         AND structgen_validate_json_array_number (data -> 'DC')
         AND structgen_validate_json_MyEnumI (data -> 'DD')
         AND structgen_validate_json_MyEnumS (data -> 'DE');
+END;
+$f$
+LANGUAGE 'plpgsql'
+IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION structgen_validate_json_array_tes_DataType (data jsonb)
+    RETURNS boolean
+    AS $f$
+BEGIN
+    IF jsonb_typeof(data) = 'null' THEN
+        RETURN TRUE;
+    END IF;
+    IF jsonb_typeof(data) != 'array' THEN
+        RETURN FALSE;
+    END IF;
+    IF jsonb_array_length(data) = 0 THEN
+        RETURN TRUE;
+    END IF;
+    RETURN (
+        SELECT
+            bool_and(structgen_validate_json_tes_DataType (value))
+        FROM
+            jsonb_array_elements(data));
 END;
 $f$
 LANGUAGE 'plpgsql'
@@ -155,7 +178,7 @@ $f$
 LANGUAGE 'plpgsql'
 IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION structgen_validate_json_struct_3716422242 (data jsonb)
+CREATE OR REPLACE FUNCTION structgen_validate_json_tes_Model (data jsonb)
     RETURNS boolean
     AS $f$
 BEGIN
@@ -164,7 +187,7 @@ BEGIN
     END IF;
     RETURN (
         SELECT
-            bool_and(KEY IN ('A', 'B', 'C', 'D', 'E', 'F'))
+            bool_and(KEY IN ('A', 'B', 'C', 'D', 'E', 'F', 'G'))
         FROM
             jsonb_each(data))
         AND structgen_validate_json_number (data -> 'A')
@@ -172,7 +195,8 @@ BEGIN
         AND structgen_validate_json_array_number (data -> 'C')
         AND structgen_validate_json_boolean (data -> 'D')
         AND structgen_validate_json_map_array_string (data -> 'E')
-        AND structgen_validate_json_struct_1883706743 (data -> 'F');
+        AND structgen_validate_json_tes_DataType (data -> 'F')
+        AND structgen_validate_json_array_tes_DataType (data -> 'G');
 END;
 $f$
 LANGUAGE 'plpgsql'

@@ -81,7 +81,11 @@ func isNullable(typ *types.Named) types.Type {
 // Special case for serial (ID) must be handled by the caller
 // An enum table is needed to detect the types which should be an enum.
 func NewSQLType(typ types.Type, enums enums.EnumTable) SQLType {
-	var out SQLType
+	var (
+		out               SQLType
+		isAnonymousStruct bool
+	)
+
 	switch typ := typ.(type) {
 	case *types.Basic:
 		out = SQLType{Type: newBuiltin(typ), IsNullable: false}
@@ -115,8 +119,10 @@ func NewSQLType(typ types.Type, enums enums.EnumTable) SQLType {
 		}
 	default:
 		out = SQLType{Type: JSONB, IsNullable: false}
+		_, isAnonymousStruct = typ.(*types.Struct)
 	}
-	if out.Type == JSONB {
+
+	if out.Type == JSONB && !isAnonymousStruct {
 		// add the additional validation information
 		out.JSON = jsonsql.NewTypeJSON(typ, enums)
 	}

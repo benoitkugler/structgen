@@ -24,7 +24,7 @@ func TestSQL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	handler := NewGenHandler(en)
+	handler := NewGenHandler(en, false)
 	decls, err := loader.WalkFile(fullPath, pkg, handler)
 	if err != nil {
 		t.Fatal(err)

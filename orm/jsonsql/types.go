@@ -3,6 +3,7 @@
 package jsonsql
 
 import (
+	"fmt"
 	"go/types"
 
 	"github.com/benoitkugler/structgen/enums"
@@ -43,15 +44,17 @@ func NewTypeJSON(t types.Type, enums enums.EnumTable) TypeJSON {
 	case *types.Array:
 		return newArrayFromArray(t, enums)
 	case *types.Struct:
+		panic(fmt.Sprintf("anonymous struct not supported: %s", t))
+	case *types.Named:
 		if utils.IsUnderlyingTime(t) {
 			// special case for time, JSONed as a string
 			return String
 		}
-		return newStruct(t, enums)
-	case *types.Named:
 		if enum, basic, ok := enums.Lookup(t); ok {
 			under := newBasic(basic)
 			return enumValue{basic: under, enumType: enum}
+		} else if st, isStruct := t.Underlying().(*types.Struct); isStruct {
+			return newStruct(st, enums, t)
 		}
 		return NewTypeJSON(t.Underlying(), enums)
 	default:
@@ -66,10 +69,11 @@ type field struct {
 
 // Struct is a fixed field struct
 type Struct struct {
+	name   *types.Named
 	fields []field
 }
 
-func newStruct(t *types.Struct, enums enums.EnumTable) Struct {
+func newStruct(t *types.Struct, enums enums.EnumTable, name *types.Named) Struct {
 	var fields []field
 	for i := 0; i < t.NumFields(); i++ {
 		f := t.Field(i)
@@ -79,7 +83,12 @@ func newStruct(t *types.Struct, enums enums.EnumTable) Struct {
 		}
 		fields = append(fields, field{key: key, type_: NewTypeJSON(f.Type(), enums)})
 	}
-	return Struct{fields: fields}
+	return Struct{fields: fields, name: name}
+}
+
+func (b Struct) Id() string {
+	pkg := b.name.Obj().Pkg().Name()[:3]
+	return pkg + "_" + b.name.Obj().Name()
 }
 
 type Map struct {

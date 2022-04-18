@@ -9,7 +9,7 @@ import (
 
 // Formatters provides format commands for Go, Dart and TypeScript.
 type Formatters struct {
-	hasGoFmt, hasDartFmt, hasTsFmt *bool
+	hasGoFmt, hasDartFmt, hasTsFmt, hasPsqlFmt *bool
 }
 
 type Format uint8
@@ -19,6 +19,7 @@ const (
 	Go
 	Dart
 	Ts
+	Psql
 )
 
 // check if the goimports command is working
@@ -69,6 +70,22 @@ func (fmts *Formatters) hasTypescript() bool {
 	return *fmts.hasTsFmt
 }
 
+// check if the pg_format command is working
+// and caches the result
+func (fmts *Formatters) hasPsql() bool {
+	if fmts.hasPsqlFmt == nil {
+		err := exec.Command("pg_format", "-v").Run()
+		if err != nil {
+			log.Printf("No formatter for Psql (%s)", err)
+		} else {
+			log.Println("Formatter for Psql detected")
+		}
+		fmts.hasPsqlFmt = new(bool)
+		*fmts.hasPsqlFmt = err == nil
+	}
+	return *fmts.hasPsqlFmt
+}
+
 // FormatFile format `filename`, if a formatter for `format` is found.
 // It returns an error if the command failed, not if no formatter is found.
 func (fr *Formatters) FormatFile(format Format, filename string) error {
@@ -84,6 +101,10 @@ func (fr *Formatters) FormatFile(format Format, filename string) error {
 	case Ts:
 		if fr.hasTypescript() {
 			return exec.Command("npx", "prettier", "--write", filename).Run()
+		}
+	case Psql:
+		if fr.hasPsql() {
+			return exec.Command("pg_format", "-i", filename).Run()
 		}
 	}
 	return nil

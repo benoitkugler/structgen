@@ -103,7 +103,10 @@ func main() {
 			typeHandler = crud.NewHandler(packageName, true)
 			format = formatter.Go
 		case "sql_gen":
-			typeHandler = creation.NewGenHandler(en)
+			// do not emit instruction to remove existing declarations
+			const eraseJSONDecl = false
+			typeHandler = creation.NewGenHandler(en, eraseJSONDecl)
+			format = formatter.Psql
 		case "sql_composite":
 			typeHandler = &composites.Composites{OriginPackageName: packageName}
 			format = formatter.Go

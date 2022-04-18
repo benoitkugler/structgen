@@ -15,8 +15,11 @@ type Model struct {
 	D bool
 	E map[string][]string
 	F DataType
+	G L
 }
 
 type MyEnumI int
 
 type MyEnumS string
+
+type L []DataType
