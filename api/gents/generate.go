@@ -115,7 +115,14 @@ func (a API) funcArgsName() string {
 }
 
 func goToTs(typ types.Type, pkg *types.Scope) tstypes.Type {
-	return tstypes.NewHandler(nil, pkg).AnalyseType(typ)
+	if named, isNamed := typ.(*types.Named); isNamed {
+		pkg = named.Obj().Pkg().Scope()
+	}
+	handler := tstypes.NewHandler(nil, pkg)
+	out := handler.AnalyseType(typ)
+	handler.ProcessInterfaces()
+	fmt.Println(out)
+	return out
 }
 
 func (a API) typeIn(pkg *types.Scope) string {
@@ -264,13 +271,12 @@ var tsNewDeclaration = loader.Declaration{
 
 func (s Service) renderTypes(enum enums.EnumTable, pkg *types.Scope) string {
 	var decls []loader.Declaration
-	handler := tstypes.NewHandler(enum, pkg)
 	for _, api := range s { // write top-level decl
-		decls = append(decls, handler.AnalyseType(api.Contrat.Input.Type).Render()...)
+		decls = append(decls, goToTs(api.Contrat.Input.Type, pkg).Render()...)
 		if api.Contrat.Input.NoId {
 			decls = append(decls, tsNewDeclaration)
 		}
-		decls = append(decls, handler.AnalyseType(api.Contrat.Return).Render()...)
+		decls = append(decls, goToTs(api.Contrat.Return, pkg).Render()...)
 	}
 	return loader.ToString(decls)
 }

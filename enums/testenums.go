@@ -12,8 +12,8 @@ const (
 type TestEnumString string
 
 const (
-	SA TestEnumString = "va" // sdsdA
-	SB TestEnumString = "vb" // sdsdB
-	SC TestEnumString = "vc" // sdsdC
-	SD TestEnumString = "vd" // sdsdD
+	SA TestEnumString = "va" // sddA
+	SB TestEnumString = "vb" // sddB
+	SC TestEnumString = "vc" // sddC
+	SD TestEnumString = "vd" // sddD
 )
