@@ -22,7 +22,13 @@ func (b basic) json() string {
 	double doubleToJson(double item) => item;
 	
 	`
-	case dartString, dartBool, dartInt, dartAny:
+	case dartString: // accept null
+		return `String stringFromJson(dynamic json) => json == null ? "" : json as String;
+		
+		String stringToJson(String item) => item;
+		
+		`
+	case dartBool, dartInt, dartAny:
 		return fmt.Sprintf(`%s %sFromJson(dynamic json) => json as %s;
 		
 		%s %sToJson(%s item) => item;
