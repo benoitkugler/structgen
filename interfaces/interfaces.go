@@ -5,6 +5,7 @@ package interfaces
 import (
 	"fmt"
 	"go/types"
+	"reflect"
 	"sort"
 
 	"github.com/benoitkugler/structgen/loader"
@@ -98,6 +99,13 @@ func (h *handler) HandleType(typ types.Type) loader.Type {
 	case *types.Struct:
 		var out class
 		for i := 0; i < under.NumFields(); i++ {
+			tag := under.Tag(i)
+
+			if dartExtern := reflect.StructTag(tag).Get("dart-extern"); dartExtern != "" {
+				// ignore this field
+				continue
+			}
+
 			if itf := h.HandleType(under.Field(i).Type()); itf != nil {
 				out.fields = append(out.fields, itf)
 			}

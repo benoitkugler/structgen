@@ -46,11 +46,17 @@ func parse(enumFile *ast.File, f *token.FileSet) (enumsValue, error) {
 			if !ok {
 				continue
 			}
+			varName := s.Names[0].String() // variable name to use in code
+
+			if !token.IsExported(varName) { // ignore private variables
+				continue
+			}
+
 			if s.Comment == nil {
 				return nil, fmt.Errorf("value as comment expected at %s", f.Position(s.Pos()))
 			}
 			text := strings.TrimSpace(s.Comment.Text()) // label to display
-			varName := s.Names[0].String()              // variable name to use in code
+
 			var typeName string
 			if s.Type == nil {
 				// for example in iotas : use last type name
@@ -72,6 +78,10 @@ func aggregate(pa *packages.Package, enums enumsValue) EnumTable {
 		obj := pa.Types.Scope().Lookup(name)
 		if decl, isConst := obj.(*types.Const); isConst {
 			varName := decl.Name()
+			if !decl.Exported() {
+				continue
+			}
+
 			constVal := decl.Val().String()
 			if named, isNamed := decl.Type().(*types.Named); isNamed {
 				typeName := named.Obj().Name()
