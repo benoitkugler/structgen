@@ -9,23 +9,33 @@ import (
 
 // return the go code implementing JSON convertions
 func (u Interface) json() string {
-	var casesFrom, casesTo []string
+	var casesFrom, casesTo, kinds []string
 
 	name := u.Name.Obj().Name()
 	wrapperName := name + "Wrapper"
 
 	for i, member := range u.Members {
+		memberName := member.Obj().Name()
+		kinds = append(kinds, memberName+"Kind") // note that the index i is matching the iota used in kinds
+
 		casesFrom = append(casesFrom, fmt.Sprintf(`case %d:
 			var data %s
 			err = json.Unmarshal(wr.Data, &data)
 			out.Data = data
-	`, i, member.Obj().Name()))
+	`, i, memberName))
 
 		caseTo := fmt.Sprintf(`case %s:
 			wr = wrapper{Kind: %d, Data: data}
-		`, member.Obj().Name(), i)
+		`, memberName, i)
 		casesTo = append(casesTo, caseTo)
 	}
+
+	codeKinds := fmt.Sprintf(`
+	const (
+		%s = iota 
+		%s
+	)
+	`, kinds[0], strings.Join(kinds[1:], "\n"))
 
 	codeFrom := fmt.Sprintf(`func (out *%s) UnmarshalJSON(src []byte) error {
 		var wr struct {
@@ -70,7 +80,9 @@ func (u Interface) json() string {
 	%s 
 
 	%s
-	`, wrapperName, name, wrapperName, name, codeFrom, codeTo)
+
+	%s
+	`, wrapperName, name, wrapperName, name, codeFrom, codeTo, codeKinds)
 }
 
 type itfSlice struct {
