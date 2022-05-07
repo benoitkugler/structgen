@@ -45,33 +45,43 @@ const (
 	-- No validation : accept anything
 	CREATE OR REPLACE FUNCTION %s (data jsonb)
 		RETURNS boolean
-		AS $f$
+		AS $$
 	BEGIN
 		RETURN TRUE;
 	END;
-	$f$
+	$$
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
 
 	vBasic = `
 	CREATE OR REPLACE FUNCTION %s (data jsonb)
 		RETURNS boolean
-		AS $f$
+		AS $$
+	DECLARE
+		is_valid boolean := jsonb_typeof(data) = '%s';
 	BEGIN
-		RETURN jsonb_typeof(data) = '%s';
+		IF NOT is_valid THEN 
+			RAISE WARNING '%% is not a %s', data;
+		END IF;
+		RETURN is_valid;
 	END;
-	$f$
+	$$
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
 
 	vEnum = `
 	CREATE OR REPLACE FUNCTION %s (data jsonb)
 		RETURNS boolean
-		AS $f$
+		AS $$
+	DECLARE
+		is_valid boolean := jsonb_typeof(data) = '%s' AND %s IN %s;
 	BEGIN
-		RETURN jsonb_typeof(data) = '%s' AND %s IN %s;
+		IF NOT is_valid THEN 
+			RAISE WARNING '%% is not a %s', data;
+		END IF;
+		RETURN is_valid;
 	END;
-	$f$
+	$$
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
 )
@@ -83,7 +93,7 @@ func (b basic) Validations() []loader.Declaration {
 	if b == Dynamic { // special case for Dynamic
 		s.Content = fmt.Sprintf(vDynamic, FunctionName(b))
 	} else {
-		s.Content = fmt.Sprintf(vBasic, FunctionName(b), string(b))
+		s.Content = fmt.Sprintf(vBasic, FunctionName(b), string(b), string(b))
 	}
 	return []loader.Declaration{s}
 }
@@ -96,14 +106,14 @@ func (b enumValue) Validations() []loader.Declaration {
 	if b.enumType.IsInt {
 		typeCast = "data::int"
 	}
-	s.Content = fmt.Sprintf(vEnum, FunctionName(b), string(b.basic), typeCast, b.enumType.AsTuple())
+	s.Content = fmt.Sprintf(vEnum, FunctionName(b), string(b.basic), typeCast, b.enumType.AsTuple(), b.Id())
 	return []loader.Declaration{s}
 }
 
 const vArray = `
 	CREATE OR REPLACE FUNCTION %s (data jsonb)
 		RETURNS boolean
-		AS $f$
+		AS $$
 	BEGIN
 		%s
 		IF jsonb_typeof(data) != 'array' THEN RETURN FALSE; END IF;
@@ -111,7 +121,7 @@ const vArray = `
 		RETURN (SELECT bool_and( %s(value) )  FROM jsonb_array_elements(data)) 
 			%s;
 	END;
-	$f$
+	$$
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
 
@@ -147,7 +157,7 @@ func (b Array) Validations() []loader.Declaration {
 const vMap = `
 	CREATE OR REPLACE FUNCTION %s (data jsonb)
 		RETURNS boolean
-		AS $f$
+		AS $$
 	BEGIN
 		IF jsonb_typeof(data) = 'null' THEN -- accept null value coming from nil maps 
 			RETURN TRUE;
@@ -155,7 +165,7 @@ const vMap = `
 		RETURN jsonb_typeof(data) = 'object'
 			AND (SELECT bool_and( %s(value) ) FROM jsonb_each(data));
 	END;
-	$f$
+	$$
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
 
@@ -175,18 +185,21 @@ func (b Map) Validations() []loader.Declaration {
 const vStruct = `
 	CREATE OR REPLACE FUNCTION %s (data jsonb)
 		RETURNS boolean
-		AS $f$
+		AS $$
+	DECLARE 
+		is_valid boolean;
 	BEGIN
 		IF jsonb_typeof(data) != 'object' THEN 
 			RETURN FALSE;
 		END IF;
-		RETURN (SELECT bool_and( 
+		is_valid := (SELECT bool_and( 
 			%s
 		) FROM jsonb_each(data))  
-		%s
-		;
+		%s;
+
+		RETURN is_valid;
 	END;
-	$f$
+	$$
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
 
@@ -217,7 +230,7 @@ func (b *class) Validations() (out []loader.Declaration) {
 const vUnion = `
 	CREATE OR REPLACE FUNCTION %s (data jsonb)
 		RETURNS boolean
-		AS $f$
+		AS $$
 	BEGIN
 		IF jsonb_typeof(data) != 'object' OR jsonb_typeof(data->'Kind') != 'number' OR jsonb_typeof(data->'Data') = 'null' THEN 
 			RETURN FALSE;
@@ -226,19 +239,21 @@ const vUnion = `
 			%s
 		END CASE;
 	END;
-	$f$
+	$$
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
 
 func (u union) Validations() (out []loader.Declaration) {
 	var cases []string
 	for kind, member := range u.members {
-		cases = append(cases, fmt.Sprintf("WHEN data->'Kind' = %d THEN \n RETURN %s(data->'Data');", kind, FunctionName(member)))
+		cases = append(cases, fmt.Sprintf("WHEN (data->'Kind')::int = %d THEN \n RETURN %s(data->'Data');", kind, FunctionName(member)))
+
+		// generate validation function for members
+		out = append(out, member.Validations()...)
 	}
 
 	cases = append(cases, "ELSE RETURN FALSE;") // unknown Kind type
 	fn := FunctionName(u)
-	return []loader.Declaration{
-		{Id: fn, Content: fmt.Sprintf(vUnion, fn, strings.Join(cases, "\n"))},
-	}
+	out = append(out, loader.Declaration{Id: fn, Content: fmt.Sprintf(vUnion, fn, strings.Join(cases, "\n"))})
+	return out
 }
