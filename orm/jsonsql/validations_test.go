@@ -32,3 +32,21 @@ func TestValidations(t *testing.T) {
 	}
 	_ = ioutil.WriteFile("test/valid.sql", []byte(loader.ToString(l)), os.ModePerm)
 }
+
+func TestItfs(t *testing.T) {
+	fn := "test/models.go"
+	pkg, err := loader.LoadSource(fn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	en, err := enums.FetchEnums(pkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, name := range pkg.Types.Scope().Names() {
+		if ty, ok := pkg.Types.Scope().Lookup(name).(*types.TypeName); ok {
+			NewTypeJSON(ty.Type(), en)
+		}
+	}
+}

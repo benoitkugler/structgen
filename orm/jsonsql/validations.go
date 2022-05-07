@@ -190,20 +190,7 @@ const vStruct = `
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
 
-// to work around possible hash collision,
-// we need to be able to check if an hash is already taken
-var structIDsTable = map[uint32]Struct{}
-
-func (b Struct) dump() []byte {
-	var data []byte
-	for _, f := range b.fields {
-		data = append(data, f.key...)
-		data = append(data, f.type_.Id()...)
-	}
-	return data
-}
-
-func (b Struct) Validations() (out []loader.Declaration) {
+func (b class) Validations() (out []loader.Declaration) {
 	var keys, checks []string
 	for _, f := range b.fields {
 		out = append(out, f.type_.Validations()...) // recursion
@@ -220,4 +207,33 @@ func (b Struct) Validations() (out []loader.Declaration) {
 	out = append(out, loader.Declaration{Id: fn, Content: content})
 
 	return out
+}
+
+const vUnion = `
+	CREATE OR REPLACE FUNCTION %s (data jsonb)
+		RETURNS boolean
+		AS $f$
+	BEGIN
+		IF jsonb_typeof(data) != 'object' OR jsonb_typeof(data->'Kind') != 'number' OR jsonb_typeof(data->'Data') = 'null' THEN 
+			RETURN FALSE;
+		END IF;
+		CASE 
+			%s
+		END CASE;
+	END;
+	$f$
+	LANGUAGE 'plpgsql'
+	IMMUTABLE;`
+
+func (u union) Validations() (out []loader.Declaration) {
+	var cases []string
+	for kind, member := range u.members {
+		cases = append(cases, fmt.Sprintf("WHEN data->'Kind' = %d THEN \n RETURN %s(data->'Data');", kind, FunctionName(member)))
+	}
+
+	cases = append(cases, "ELSE RETURN FALSE;") // unknown Kind type
+	fn := FunctionName(u)
+	return []loader.Declaration{
+		{Id: fn, Content: fmt.Sprintf(vUnion, fn, strings.Join(cases, "\n"))},
+	}
 }

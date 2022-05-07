@@ -23,3 +23,15 @@ type MyEnumI int
 type MyEnumS string
 
 type L []DataType
+
+type myItf interface {
+	isItf()
+}
+
+func (L) isItf() {}
+
+type S struct {
+	A int
+}
+
+func (S) isItf() {}
