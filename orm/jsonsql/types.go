@@ -157,12 +157,13 @@ func (an *Analyzer) newArrayFromSlice(t *types.Slice) Array {
 type basic string
 
 func newBasic(t *types.Basic) basic {
-	switch t.Info() {
-	case types.IsString:
+	info := t.Info()
+	switch {
+	case info&types.IsString != 0:
 		return String
-	case types.IsBoolean:
+	case info&types.IsBoolean != 0:
 		return Boolean
-	case types.IsFloat, types.IsInteger:
+	case info&types.IsNumeric != 0:
 		return Number
 	default:
 		return Dynamic

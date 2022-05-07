@@ -68,22 +68,6 @@ const (
 	$$
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
-
-	vEnum = `
-	CREATE OR REPLACE FUNCTION %s (data jsonb)
-		RETURNS boolean
-		AS $$
-	DECLARE
-		is_valid boolean := jsonb_typeof(data) = '%s' AND %s IN %s;
-	BEGIN
-		IF NOT is_valid THEN 
-			RAISE WARNING '%% is not a %s', data;
-		END IF;
-		RETURN is_valid;
-	END;
-	$$
-	LANGUAGE 'plpgsql'
-	IMMUTABLE;`
 )
 
 func (b basic) Id() string { return string(b) }
@@ -99,6 +83,22 @@ func (b basic) Validations() []loader.Declaration {
 }
 
 func (b enumValue) Id() string { return b.enumType.Name }
+
+const vEnum = `
+CREATE OR REPLACE FUNCTION %s (data jsonb)
+	RETURNS boolean
+	AS $$
+DECLARE
+	is_valid boolean := jsonb_typeof(data) = '%s' AND %s IN %s;
+BEGIN
+	IF NOT is_valid THEN 
+		RAISE WARNING '%% is not a %s', data;
+	END IF;
+	RETURN is_valid;
+END;
+$$
+LANGUAGE 'plpgsql'
+IMMUTABLE;`
 
 func (b enumValue) Validations() []loader.Declaration {
 	s := loader.Declaration{Id: FunctionName(b)}
