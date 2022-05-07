@@ -23,9 +23,10 @@ func TestValidations(t *testing.T) {
 	}
 
 	var l []loader.Declaration
+	an := NewAnalyser(en)
 	for _, name := range pkg.Types.Scope().Names() {
 		if ty, ok := pkg.Types.Scope().Lookup(name).(*types.TypeName); ok {
-			jsonT := NewTypeJSON(ty.Type(), en)
+			jsonT := an.Convert(ty.Type())
 
 			l = append(l, jsonT.Validations()...)
 		}
@@ -44,9 +45,10 @@ func TestItfs(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	an := NewAnalyser(en)
 	for _, name := range pkg.Types.Scope().Names() {
 		if ty, ok := pkg.Types.Scope().Lookup(name).(*types.TypeName); ok {
-			NewTypeJSON(ty.Type(), en)
+			an.Convert(ty.Type())
 		}
 	}
 }

@@ -190,7 +190,12 @@ const vStruct = `
 	LANGUAGE 'plpgsql'
 	IMMUTABLE;`
 
-func (b class) Validations() (out []loader.Declaration) {
+func (b *class) Validations() (out []loader.Declaration) {
+	if b.renderCache[b] {
+		return nil
+	}
+	b.renderCache[b] = true
+
 	var keys, checks []string
 	for _, f := range b.fields {
 		out = append(out, f.type_.Validations()...) // recursion

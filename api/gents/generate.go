@@ -121,7 +121,6 @@ func goToTs(typ types.Type, pkg *types.Scope) tstypes.Type {
 	handler := tstypes.NewHandler(nil, pkg)
 	out := handler.AnalyseType(typ)
 	handler.ProcessInterfaces()
-	fmt.Println(out)
 	return out
 }
 

@@ -46,7 +46,6 @@ func (d handler) AnalyseType(typ types.Type) Type {
 	out := d.createType(typ)
 	itf, ok := d.itfs.NewInterface(typ)
 	if ok {
-		fmt.Println(out, itf.Members)
 		// also analyse members
 		for _, member := range itf.Members {
 			d.AnalyseType(member)

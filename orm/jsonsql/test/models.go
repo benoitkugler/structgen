@@ -35,3 +35,8 @@ type S struct {
 }
 
 func (S) isItf() {}
+
+type Recursive struct {
+	B []Recursive
+	A int
+}

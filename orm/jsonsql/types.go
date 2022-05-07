@@ -34,16 +34,42 @@ func FunctionName(t TypeJSON) string {
 	return "structgen_validate_json_" + t.Id()
 }
 
-func NewTypeJSON(t types.Type, enums enums.EnumTable) TypeJSON {
+// Analyzer converts a Go type to its json checks.
+type Analyzer struct {
+	enums       enums.EnumTable
+	cache       map[types.Type]TypeJSON
+	renderCache map[TypeJSON]bool
+}
+
+func NewAnalyser(enums enums.EnumTable) *Analyzer {
+	return &Analyzer{
+		enums:       enums,
+		cache:       make(map[types.Type]TypeJSON),
+		renderCache: make(map[TypeJSON]bool),
+	}
+}
+
+// Convert returns the json-SQL type for `t`.
+func (an *Analyzer) Convert(t types.Type) TypeJSON {
+	// check for the cache
+	if out, ok := an.cache[t]; ok {
+		return out
+	}
+	out := an.create(t)
+	an.cache[t] = out
+	return out
+}
+
+func (an *Analyzer) create(t types.Type) TypeJSON {
 	switch t := t.(type) {
 	case *types.Basic:
 		return newBasic(t)
 	case *types.Map:
-		return newMap(t, enums)
+		return an.newMap(t)
 	case *types.Slice:
-		return newArrayFromSlice(t, enums)
+		return an.newArrayFromSlice(t)
 	case *types.Array:
-		return newArrayFromArray(t, enums)
+		return an.newArrayFromArray(t)
 	case *types.Struct:
 		panic(fmt.Sprintf("anonymous struct not supported: %s", t))
 	case *types.Named:
@@ -51,22 +77,15 @@ func NewTypeJSON(t types.Type, enums enums.EnumTable) TypeJSON {
 			// special case for time, JSONed as a string
 			return String
 		}
-		if enum, basic, ok := enums.Lookup(t); ok {
+		if enum, basic, ok := an.enums.Lookup(t); ok {
 			under := newBasic(basic)
 			return enumValue{basic: under, enumType: enum}
 		} else if st, isStruct := t.Underlying().(*types.Struct); isStruct {
-			return newStruct(st, enums, t)
+			return an.newStruct(st, t)
 		} else if _, isItf := t.Underlying().(*types.Interface); isItf {
-			scope := t.Obj().Pkg().Scope()
-			an := interfaces.NewAnalyser(scope)
-			itf, _ := an.NewInterface(t)
-			out := union{itf: itf, members: make([]TypeJSON, len(itf.Members))}
-			for i, m := range itf.Members {
-				out.members[i] = NewTypeJSON(m, enums)
-			}
-			return out
+			return an.newUnion(t)
 		}
-		return NewTypeJSON(t.Underlying(), enums)
+		return an.Convert(t.Underlying())
 	default:
 		return Dynamic
 	}
@@ -81,9 +100,16 @@ type field struct {
 type class struct {
 	name   *types.Named
 	fields []field
+
+	renderCache map[TypeJSON]bool // to handle recursive types
 }
 
-func newStruct(t *types.Struct, enums enums.EnumTable, name *types.Named) class {
+func (an *Analyzer) newStruct(t *types.Struct, name *types.Named) *class {
+	// register the output struct before recursing, to properly handle
+	// recursive types
+	out := &class{name: name, renderCache: an.renderCache}
+	an.cache[name] = out
+
 	var fields []field
 	for i := 0; i < t.NumFields(); i++ {
 		f := t.Field(i)
@@ -91,9 +117,10 @@ func newStruct(t *types.Struct, enums enums.EnumTable, name *types.Named) class 
 		if !isExported {
 			continue
 		}
-		fields = append(fields, field{key: key, type_: NewTypeJSON(f.Type(), enums)})
+		fields = append(fields, field{key: key, type_: an.Convert(f.Type())})
 	}
-	return class{fields: fields, name: name}
+	out.fields = fields
+	return out
 }
 
 func idFromNamed(typ *types.Named) string {
@@ -101,7 +128,7 @@ func idFromNamed(typ *types.Named) string {
 	return pkg + "_" + typ.Obj().Name()
 }
 
-func (b class) Id() string {
+func (b *class) Id() string {
 	return idFromNamed(b.name)
 }
 
@@ -109,8 +136,8 @@ type Map struct {
 	elem TypeJSON
 }
 
-func newMap(t *types.Map, enums enums.EnumTable) Map {
-	return Map{elem: NewTypeJSON(t.Elem(), enums)}
+func (an *Analyzer) newMap(t *types.Map) Map {
+	return Map{elem: an.Convert(t.Elem())}
 }
 
 // Array encode a slice or an array (homogenous)
@@ -119,12 +146,12 @@ type Array struct {
 	length int64 // -1 for slice
 }
 
-func newArrayFromArray(t *types.Array, enums enums.EnumTable) Array {
-	return Array{length: t.Len(), elem: NewTypeJSON(t.Elem(), enums)}
+func (an *Analyzer) newArrayFromArray(t *types.Array) Array {
+	return Array{length: t.Len(), elem: an.Convert(t.Elem())}
 }
 
-func newArrayFromSlice(t *types.Slice, enums enums.EnumTable) Array {
-	return Array{length: -1, elem: NewTypeJSON(t.Elem(), enums)}
+func (an *Analyzer) newArrayFromSlice(t *types.Slice) Array {
+	return Array{length: -1, elem: an.Convert(t.Elem())}
 }
 
 type basic string
@@ -155,4 +182,15 @@ type union struct {
 
 func (u union) Id() string {
 	return idFromNamed(u.itf.Name)
+}
+
+func (an *Analyzer) newUnion(t *types.Named) union {
+	scope := t.Obj().Pkg().Scope()
+	ana := interfaces.NewAnalyser(scope)
+	itf, _ := ana.NewInterface(t)
+	out := union{itf: itf, members: make([]TypeJSON, len(itf.Members))}
+	for i, m := range itf.Members {
+		out.members[i] = an.Convert(m)
+	}
+	return out
 }

@@ -124,7 +124,8 @@ func NewSQLType(typ types.Type, enums enums.EnumTable) SQLType {
 
 	if out.Type == JSONB && !isAnonymousStruct {
 		// add the additional validation information
-		out.JSON = jsonsql.NewTypeJSON(typ, enums)
+		an := jsonsql.NewAnalyser(enums)
+		out.JSON = an.Convert(typ)
 	}
 	return out
 }
