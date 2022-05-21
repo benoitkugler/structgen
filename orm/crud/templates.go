@@ -218,6 +218,18 @@ func (item {{ .Name }}) Delete(tx DB) error {
 			return out
 		}	
 		{{ end}}
+
+		// {{ .GoName }}s returns the list of ids of {{ .GoName }}
+		// contained in this link table.
+		// They are not garanteed to be distinct.
+		func (items {{$.Name}}s) {{ .GoName }}s() IDs {
+			out := make(IDs, len(items))
+			for index, target := range items {
+				out[index] = target.{{ .GoName }}
+			}
+			return out
+		}
+
 	{{ end }}
 {{end}}`))
 
