@@ -186,8 +186,7 @@ func (u union) Id() string {
 }
 
 func (an *Analyzer) newUnion(t *types.Named) union {
-	scope := t.Obj().Pkg().Scope()
-	ana := interfaces.NewAnalyser(scope)
+	ana := interfaces.NewAnalyser()
 	itf, _ := ana.NewInterface(t)
 	out := union{itf: itf, members: make([]TypeJSON, len(itf.Members))}
 	for i, m := range itf.Members {

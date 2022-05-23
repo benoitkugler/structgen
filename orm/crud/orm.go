@@ -19,6 +19,16 @@ type StructSQLTest struct {
 	orm.GoSQLTable
 }
 
+func hasScanMethod(typ *types.Named) bool {
+	for i := 0; i < typ.NumMethods(); i++ {
+		meth := typ.Method(i)
+		if meth.Name() == "Scan" {
+			return true
+		}
+	}
+	return false
+}
+
 func (m StructSQL) Render() []loader.Declaration {
 	args := m.GoSQLTable
 
@@ -44,13 +54,17 @@ func (m StructSQL) Render() []loader.Declaration {
 			if goTypeName == "" {
 				panic(fmt.Sprintf("JSON field %s is not named: SQL Value interface can't be implemented", field.GoName))
 			}
-			decls = append(decls, loader.Declaration{
-				Id: "json_value" + goTypeName,
-				Content: fmt.Sprintf(`
-				func (s *%s) Scan(src interface{}) error { return loadJSON(s, src) }
-				func (s %s) Value() (driver.Value, error) { return dumpJSON(s) }
-				`, goTypeName, goTypeName),
-			})
+
+			// check if the type does no already implements Scan
+			if !hasScanMethod(field.Type.Go.(*types.Named)) {
+				decls = append(decls, loader.Declaration{
+					Id: "json_value" + goTypeName,
+					Content: fmt.Sprintf(`
+					func (s *%s) Scan(src interface{}) error { return loadJSON(s, src) }
+					func (s %s) Value() (driver.Value, error) { return dumpJSON(s) }
+					`, goTypeName, goTypeName),
+				})
+			}
 		}
 	}
 

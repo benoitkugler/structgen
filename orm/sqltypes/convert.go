@@ -88,37 +88,38 @@ func NewSQLType(typ types.Type, enums enums.EnumTable) SQLType {
 
 	switch typ := typ.(type) {
 	case *types.Basic:
-		out = SQLType{Type: newBuiltin(typ), IsNullable: false}
+		out = SQLType{Go: typ, Type: newBuiltin(typ), IsNullable: false}
 	case *types.Array:
-		out = SQLType{Type: newTypeFromArray(typ, typ.Len()), IsNullable: false}
+		out = SQLType{Go: typ, Type: newTypeFromArray(typ, typ.Len()), IsNullable: false}
 	case *types.Slice:
 		// since pq lib convert nil slice to null
 		// we have to make this types nullable
 
 		// special case for []byte
 		if basic, ok := typ.Elem().(*types.Basic); ok && basic.Kind() == types.Byte {
-			out = SQLType{Type: Builtin("bytea"), IsNullable: true}
+			out = SQLType{Go: typ, Type: Builtin("bytea"), IsNullable: true}
 		} else {
-			out = SQLType{Type: newTypeFromArray(typ, -1), IsNullable: true}
+			out = SQLType{Go: typ, Type: newTypeFromArray(typ, -1), IsNullable: true}
 		}
 	case *types.Named:
 		if typ.Obj().Name() == "Date" {
 			// special case for Date type
-			out = SQLType{Type: Builtin("date"), IsNullable: false}
+			out = SQLType{Go: typ, Type: Builtin("date"), IsNullable: false}
 		} else if utils.IsUnderlyingTime(typ) {
-			out = SQLType{Type: Builtin("timestamp (0) with time zone"), IsNullable: true}
+			out = SQLType{Go: typ, Type: Builtin("timestamp (0) with time zone"), IsNullable: true}
 		} else if nullableType := isNullable(typ); nullableType != nil {
 			out = NewSQLType(nullableType, enums) // convert associated type
 			out.IsNullable = true                 // mark as nullable
 		} else if enum, basic, isEnum := enums.Lookup(typ); isEnum {
 			under := newBuiltin(basic)
-			out = SQLType{Type: Enum{underlying: under, Type: enum}}
+			out = SQLType{Go: typ, Type: Enum{underlying: under, Type: enum}}
 		} else {
 			out = NewSQLType(typ.Underlying(), enums)
 			out.GoName = typ.Obj().Name()
 		}
+		out.Go = typ
 	default:
-		out = SQLType{Type: JSONB, IsNullable: false}
+		out = SQLType{Go: typ, Type: JSONB, IsNullable: false}
 		_, isAnonymousStruct = typ.(*types.Struct)
 	}
 

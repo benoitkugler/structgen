@@ -20,7 +20,7 @@ func TestAnalyze(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := NewHandler("test", pkg.Types)
+	h := NewHandler("test")
 	decls, err := loader.WalkFile(fullPath, pkg, h)
 	if err != nil {
 		t.Fatal(err)

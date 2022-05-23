@@ -25,11 +25,11 @@ type handler struct {
 	types map[types.Type]dataFunction
 }
 
-func NewHandler(packageName string, enums enums.EnumTable, pkg *types.Package) loader.Handler {
+func NewHandler(packageName string, enums enums.EnumTable) loader.Handler {
 	return handler{
 		PackageName: packageName,
 		EnumsTable:  enums,
-		itfs:        interfaces.NewAnalyser(pkg.Scope()),
+		itfs:        interfaces.NewAnalyser(),
 		types:       make(map[types.Type]dataFunction),
 	}
 }

@@ -244,7 +244,7 @@ func (f fnStruct) Id() string {
 	if packageName == f.TargetPackage {
 		return localName
 	}
-	return packageName + localName
+	return packageName[:3] + "_" + localName
 }
 
 func (f fnStruct) Type() types.Type {
@@ -385,6 +385,7 @@ func (f fnInterface) Render() []loader.Declaration {
 		membersDecl = append(membersDecl, member.Render()...)
 	}
 
+	qualifiedName := typeName(f.TargetPackage, f.typ_)
 	return append([]loader.Declaration{{
 		Id: f.Id(),
 		Content: fmt.Sprintf(`
@@ -394,7 +395,7 @@ func (f fnInterface) Render() []loader.Declaration {
 		}
 		i := rand.Intn(%d)
 		return choix[i]
-	}`, f.Id(), f.Id(), f.Id(),
+	}`, f.typ_.Obj().Name(), qualifiedName, qualifiedName,
 			strings.Join(choix, ""),
 			len(f.members)),
 	}}, membersDecl...)

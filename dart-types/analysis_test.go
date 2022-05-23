@@ -26,7 +26,7 @@ func TestGenerate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := NewHandler(et, pkg.Types)
+	h := NewHandler(et)
 	decls, err := loader.WalkFile(fullPath, pkg, h)
 	if err != nil {
 		t.Fatal(err)

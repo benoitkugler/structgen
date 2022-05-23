@@ -16,7 +16,7 @@ func (u Interface) json() string {
 
 	for i, member := range u.Members {
 		memberName := member.Obj().Name()
-		kinds = append(kinds, memberName+"Kind") // note that the index i is matching the iota used in kinds
+		kinds = append(kinds, memberName+name[0:2]+"Kind") // note that the index i is matching the iota used in kinds
 
 		casesFrom = append(casesFrom, fmt.Sprintf(`case %d:
 			var data %s

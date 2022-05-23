@@ -126,7 +126,7 @@ List<ItfName> listItfNameFromJson(dynamic json) {
 // github.com/benoitkugler/structgen/dart-types/test.ListV
 typedef ListV = List<ItfName>;
 
-String stringFromJson(dynamic json) => json as String;
+String stringFromJson(dynamic json) => json == null ? "" : json as String;
 		
 		String stringToJson(String item) => item;
 		

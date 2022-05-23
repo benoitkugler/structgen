@@ -3,12 +3,14 @@ package sqltypes
 
 import (
 	"fmt"
+	"go/types"
 
 	"github.com/benoitkugler/structgen/enums"
 	"github.com/benoitkugler/structgen/orm/jsonsql"
 )
 
 type SQLType struct {
+	Go         types.Type
 	IsNullable bool
 	Type       sqlType
 	JSON       jsonsql.TypeJSON // might be null

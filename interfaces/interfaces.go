@@ -48,13 +48,13 @@ var _ loader.Handler = (*handler)(nil)
 
 // Analyzer may be used to handle interface types.
 type Analyzer struct {
-	pkgNamedTypes []*types.Named
+	pkgNamedTypes map[*types.Package][]*types.Named
 	itfs          map[*types.Named]Interface
 }
 
-func NewAnalyser(pkg *types.Scope) *Analyzer {
+func NewAnalyser() *Analyzer {
 	return &Analyzer{
-		pkgNamedTypes: allNamedTypes(pkg),
+		pkgNamedTypes: make(map[*types.Package][]*types.Named),
 		itfs:          make(map[*types.Named]Interface),
 	}
 }
@@ -74,8 +74,8 @@ type handler struct {
 	packageName string
 }
 
-func NewHandler(packageName string, pkg *types.Package) loader.Handler {
-	return &handler{packageName: packageName, analyzer: NewAnalyser(pkg.Scope())}
+func NewHandler(packageName string) loader.Handler {
+	return &handler{packageName: packageName, analyzer: NewAnalyser()}
 }
 
 func (handler) HandleComment(loader.Comment) error { return nil }
@@ -149,33 +149,13 @@ func (an *Analyzer) NewInterface(typ types.Type) (Interface, bool) {
 	return itf, true
 }
 
-// // Process uses the accumulated types to find
-// // the interfaces and their members.
-// func (an Analyzer) Process(pkg *types.Package) Interfaces {
-// 	types_ := allNamedTypes(pkg)
-
-// 	var out Interfaces
-// 	for namedITF := range an.interfaces {
-// 		itf := namedITF.Underlying().(*types.Interface)
-
-// 		item := Interface{Name: namedITF}
-// 		for _, t := range types_ {
-// 			if types.Implements(t, itf) {
-// 				item.Members = append(item.Members, t)
-// 			}
-// 		}
-
-// 		sort.Slice(item.Members, func(i, j int) bool {
-// 			return item.Members[i].Obj().Name() < item.Members[j].Obj().Name()
-// 		})
-
-// 		out = append(out, item)
-// 	}
-
-// 	sort.Slice(out, func(i, j int) bool { return out[i].Name.Obj().Name() < out[j].Name.Obj().Name() })
-
-// 	return out
-// }
+func (an *Analyzer) getNamed(pkg *types.Package) []*types.Named {
+	if l, has := an.pkgNamedTypes[pkg]; has {
+		return l
+	}
+	an.pkgNamedTypes[pkg] = allNamedTypes(pkg.Scope())
+	return an.pkgNamedTypes[pkg]
+}
 
 // processITF uses the accumulated types to find
 // the interfaces and their members.
@@ -183,7 +163,8 @@ func (an *Analyzer) processITF(namedITF *types.Named) Interface {
 	itf := namedITF.Underlying().(*types.Interface)
 
 	item := Interface{Name: namedITF}
-	for _, t := range an.pkgNamedTypes {
+	for _, t := range an.getNamed(namedITF.Obj().Pkg()) {
+		// for _, t := range an.pkgNamedTypes {
 		// do not add the interface as member of itself
 		if _, isItf := t.Underlying().(*types.Interface); isItf {
 			continue

@@ -47,6 +47,10 @@ func (item union2Wrapper) MarshalJSON() ([]byte, error) {
 	return json.Marshal(wr)
 }
 
+const (
+	member1union2Kind = iota
+)
+
 func (ct ITFSlice) MarshalJSON() ([]byte, error) {
 	tmp := make([]union2Wrapper, len(ct))
 	for i, v := range ct {
@@ -119,3 +123,9 @@ func (item union1Wrapper) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(wr)
 }
+
+const (
+	member1union1Kind = iota
+	member2union1Kind
+	member3union1Kind
+)

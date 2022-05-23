@@ -27,7 +27,7 @@ func main() {
 		log.Fatalf("cant't parse enums : %s", err)
 	}
 
-	code := apis.Render(enumTable, pkg.Types.Scope())
+	code := apis.Render(enumTable)
 
 	if err = ioutil.WriteFile(*out, []byte(code), os.ModePerm); err != nil {
 		log.Fatal(err)

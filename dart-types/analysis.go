@@ -15,10 +15,10 @@ import (
 
 var _ loader.Handler = (*handler)(nil)
 
-func NewHandler(enumsTable enums.EnumTable, pkg *types.Package) *handler {
+func NewHandler(enumsTable enums.EnumTable) *handler {
 	return &handler{
 		enumsTable:  enumsTable,
-		itfs:        interfaces.NewAnalyser(pkg.Scope()),
+		itfs:        interfaces.NewAnalyser(),
 		types:       make(map[types.Type]dartType),
 		renderCache: make(map[dartType]bool),
 	}
