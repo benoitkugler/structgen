@@ -43,5 +43,5 @@ func TestGenerateMaps(t *testing.T) {
 			Return:      types.NewMap(types.Typ[types.String], types.NewSlice(types.Typ[types.Int])),
 		},
 	}
-	fmt.Println(api.generateMethod())
+	fmt.Println(api.generateMethod(nil))
 }

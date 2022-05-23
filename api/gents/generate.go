@@ -38,8 +38,8 @@ type TypeNoId struct {
 	NoId bool
 }
 
-func (t TypeNoId) render() string {
-	baseType := goToTs(t.Type).Name()
+func (t TypeNoId) render(enum enums.EnumTable) string {
+	baseType := goToTs(enum, t.Type).Name()
 	if t.NoId {
 		return "New<" + baseType + ">"
 	}
@@ -114,14 +114,14 @@ func (a API) funcArgsName() string {
 	return "params"
 }
 
-func goToTs(typ types.Type) tstypes.Type {
-	handler := tstypes.NewHandler(nil)
+func goToTs(enum enums.EnumTable, typ types.Type) tstypes.Type {
+	handler := tstypes.NewHandler(enum)
 	out := handler.AnalyseType(typ)
 	handler.ProcessInterfaces()
 	return out
 }
 
-func (a API) typeIn() string {
+func (a API) typeIn(enum enums.EnumTable) string {
 	if a.withBody() {
 		if a.withFormData() { // form data mode
 			params := "params: " + paramsType(a.Contrat.Form.typedValues())
@@ -130,7 +130,7 @@ func (a API) typeIn() string {
 			}
 			return params
 		} else { // JSON mode
-			return "params: " + a.Contrat.Input.render()
+			return "params: " + a.Contrat.Input.render(enum)
 		}
 	}
 	// params as query params
@@ -141,8 +141,8 @@ func (a API) typeIn() string {
 }
 
 // use a named package
-func (a API) typeOut() string {
-	return goToTs(a.Contrat.Return).Name()
+func (a API) typeOut(enum enums.EnumTable) string {
+	return goToTs(enum, a.Contrat.Return).Name()
 }
 
 var rePlaceholder = regexp.MustCompile(`:([^/"']+)`)
@@ -185,7 +185,7 @@ func (c Contrat) convertTypedQueryParams() string {
 	return "{ " + strings.Join(chunks, ", ") + " }"
 }
 
-func (a API) generateCall() string {
+func (a API) generateCall(enum enums.EnumTable) string {
 	var template string
 	if a.withBody() {
 		if a.withFormData() { // add the creation of FormData
@@ -207,10 +207,10 @@ func (a API) generateCall() string {
 		}
 		template = "const rep:AxiosResponse<%s> = await Axios.%s(fullUrl" + callParams + ")"
 	}
-	return fmt.Sprintf(template, a.typeOut(), a.methodLower())
+	return fmt.Sprintf(template, a.typeOut(enum), a.methodLower())
 }
 
-func (a API) generateMethod() string {
+func (a API) generateMethod(enum enums.EnumTable) string {
 	const template = `
 	protected async raw%s(%s) {
 		const fullUrl = %s;
@@ -234,8 +234,8 @@ func (a API) generateMethod() string {
 	`
 	fnName := a.Contrat.HandlerName
 	return fmt.Sprintf(template,
-		fnName, a.typeIn(), a.fullUrl(), a.generateCall(), fnName, fnName, fnName, a.typeIn(),
-		fnName, a.funcArgsName(), fnName, fnName, a.typeOut())
+		fnName, a.typeIn(enum), a.fullUrl(), a.generateCall(enum), fnName, fnName, fnName, a.typeIn(enum),
+		fnName, a.funcArgsName(), fnName, fnName, a.typeOut(enum))
 }
 
 type Service []API
@@ -272,11 +272,11 @@ var tsNewDeclaration = loader.Declaration{
 func (s Service) renderTypes(enum enums.EnumTable) string {
 	var decls []loader.Declaration
 	for _, api := range s { // write top-level decl
-		decls = append(decls, goToTs(api.Contrat.Input.Type).Render()...)
+		decls = append(decls, goToTs(enum, api.Contrat.Input.Type).Render()...)
 		if api.Contrat.Input.NoId {
 			decls = append(decls, tsNewDeclaration)
 		}
-		decls = append(decls, goToTs(api.Contrat.Return).Render()...)
+		decls = append(decls, goToTs(enum, api.Contrat.Return).Render()...)
 	}
 	return loader.ToString(decls)
 }
@@ -284,7 +284,7 @@ func (s Service) renderTypes(enum enums.EnumTable) string {
 func (s Service) Render(enum enums.EnumTable) string {
 	apiCalls := make([]string, len(s))
 	for i, api := range s {
-		apiCalls[i] = api.generateMethod()
+		apiCalls[i] = api.generateMethod(enum)
 	}
 
 	urlParams, ok := s.urlParamsType()
