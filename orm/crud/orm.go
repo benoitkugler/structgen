@@ -11,25 +11,22 @@ import (
 
 var _ loader.Handler = &handler{} // interface conformity
 
-type StructSQL struct {
+type structSQL struct {
+	packageName string
 	orm.GoSQLTable
 }
 
-type StructSQLTest struct {
+type structSQLTest struct {
+	packageName string
 	orm.GoSQLTable
 }
 
-func hasScanMethod(typ *types.Named) bool {
-	for i := 0; i < typ.NumMethods(); i++ {
-		meth := typ.Method(i)
-		if meth.Name() == "Scan" {
-			return true
-		}
-	}
-	return false
+// return `true` is typ package name is the current package
+func (st structSQL) isTypeLocal(typ *types.Named) bool {
+	return typ.Obj().Pkg().Name() == st.packageName
 }
 
-func (m StructSQL) Render() []loader.Declaration {
+func (m structSQL) Render() []loader.Declaration {
 	args := m.GoSQLTable
 
 	tmpl := templateStructLink
@@ -55,8 +52,8 @@ func (m StructSQL) Render() []loader.Declaration {
 				panic(fmt.Sprintf("JSON field %s is not named: SQL Value interface can't be implemented", field.GoName))
 			}
 
-			// check if the type does no already implements Scan
-			if !hasScanMethod(field.Type.Go.(*types.Named)) {
+			// check if the type is in the same package
+			if m.isTypeLocal(field.Type.Go.(*types.Named)) {
 				decls = append(decls, loader.Declaration{
 					Id: "json_value" + goTypeName,
 					Content: fmt.Sprintf(`
@@ -71,7 +68,7 @@ func (m StructSQL) Render() []loader.Declaration {
 	return decls
 }
 
-func (m StructSQLTest) Render() []loader.Declaration {
+func (m structSQLTest) Render() []loader.Declaration {
 	args := m.GoSQLTable
 	var out bytes.Buffer
 	if err := templateTest.Execute(&out, args); err != nil {
@@ -85,7 +82,7 @@ type handler struct {
 	PackageName string
 
 	uniqueConstraints map[string][]string // table name -> unique cols
-	tables            []StructSQL
+	tables            []structSQL
 
 	IsTest bool
 }
@@ -147,9 +144,9 @@ func (l *handler) HandleType(typ types.Type) loader.Type {
 	}
 	var decl loader.Type
 	if l.IsTest {
-		decl = StructSQLTest{item}
+		decl = structSQLTest{l.PackageName, item}
 	} else {
-		table := StructSQL{item}
+		table := structSQL{l.PackageName, item}
 		l.tables = append(l.tables, table)
 		decl = table
 	}
