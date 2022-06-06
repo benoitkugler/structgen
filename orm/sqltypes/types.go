@@ -38,6 +38,11 @@ type sqlType interface {
 
 type Builtin string
 
+const (
+	SQLDate = Builtin("date")
+	SQLTime = Builtin("timestamp (0) with time zone")
+)
+
 func (Builtin) Constraint(string) string { return "" }
 func (b Builtin) string() string         { return string(b) }
 

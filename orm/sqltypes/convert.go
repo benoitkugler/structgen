@@ -104,9 +104,9 @@ func NewSQLType(typ types.Type, enums enums.EnumTable) SQLType {
 	case *types.Named:
 		if typ.Obj().Name() == "Date" {
 			// special case for Date type
-			out = SQLType{Go: typ, Type: Builtin("date"), IsNullable: false}
+			out = SQLType{Go: typ, Type: SQLDate, IsNullable: false}
 		} else if utils.IsUnderlyingTime(typ) {
-			out = SQLType{Go: typ, Type: Builtin("timestamp (0) with time zone"), IsNullable: true}
+			out = SQLType{Go: typ, Type: SQLTime, IsNullable: true}
 		} else if nullableType := isNullable(typ); nullableType != nil {
 			out = NewSQLType(nullableType, enums) // convert associated type
 			out.IsNullable = true                 // mark as nullable

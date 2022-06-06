@@ -7,6 +7,7 @@ import (
 
 	"github.com/benoitkugler/structgen/loader"
 	"github.com/benoitkugler/structgen/orm"
+	"github.com/benoitkugler/structgen/orm/sqltypes"
 )
 
 var _ loader.Handler = &handler{} // interface conformity
@@ -44,13 +45,40 @@ func (m structSQL) Render() []loader.Declaration {
 
 	decls := []loader.Declaration{{Id: m.Id(), Content: out.String()}}
 
-	// generate the JSON Value interface method
+	// generate the value interface method
 	for _, field := range m.Fields {
-		if field.Type.JSON != nil {
-			goTypeName := field.Type.GoName
-			if goTypeName == "" {
+		if field.Type.Type == sqltypes.SQLDate || field.Type.Type == sqltypes.SQLTime {
+			named, ok := field.Type.Go.(*types.Named)
+			if !ok {
 				panic(fmt.Sprintf("JSON field %s is not named: SQL Value interface can't be implemented", field.GoName))
 			}
+			goTypeName := named.Obj().Name()
+
+			decls = append(decls, loader.Declaration{
+				Id: "datetime_value" + goTypeName,
+				Content: fmt.Sprintf(`
+				func (s *%s) Scan(src interface{}) error {
+					var tmp pq.NullTime
+					err := tmp.Scan(src)
+					if err != nil {
+						return err
+					}
+					*s = %s(tmp.Time)
+					return nil
+				}
+	
+				func (s %s) Value() (driver.Value, error) {
+					return pq.NullTime{Time: time.Time(s), Valid: true}.Value()
+				}
+				`, goTypeName, goTypeName, goTypeName),
+			})
+
+		} else if field.Type.JSON != nil {
+			named, ok := field.Type.Go.(*types.Named)
+			if !ok {
+				panic(fmt.Sprintf("JSON field %s is not named: SQL Value interface can't be implemented", field.GoName))
+			}
+			goTypeName := named.Obj().Name()
 
 			// check if the type is in the same package
 			if m.isTypeLocal(field.Type.Go.(*types.Named)) {
