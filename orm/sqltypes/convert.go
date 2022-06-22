@@ -50,7 +50,7 @@ func newTypeFromArray(typ arrayLike, length int64) sqlType {
 	switch elemTyp := elem.Underlying().(type) {
 	case *types.Basic:
 		sqlElemType := newBuiltin(elemTyp)
-		return Array{element: sqlElemType, length: length}
+		return Array{Element: sqlElemType, length: length}
 	default:
 		log.Printf("unknow array element type %s, jsonb used for the whole array", elem)
 		return JSONB

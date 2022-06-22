@@ -58,7 +58,7 @@ func (e Enum) string() string { return e.underlying.string() }
 
 // Array is a one-dimensionnal SQL array
 type Array struct {
-	element Builtin
+	Element Builtin
 	length  int64 // -1 for a slice
 }
 
@@ -70,5 +70,5 @@ func (a Array) Constraint(field string) string {
 }
 
 func (a Array) string() string {
-	return fmt.Sprintf("%s[]", a.element.string())
+	return fmt.Sprintf("%s[]", a.Element.string())
 }

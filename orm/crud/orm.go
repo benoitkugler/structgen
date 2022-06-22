@@ -23,8 +23,14 @@ type structSQLTest struct {
 }
 
 // return `true` is typ package name is the current package
-func (st structSQL) isTypeLocal(typ *types.Named) bool {
-	return typ.Obj().Pkg().Name() == st.packageName
+func (st structSQL) canImplementMethod(field string, typ types.Type) (string, bool) {
+	named, ok := typ.(*types.Named)
+	if !ok {
+		panic(fmt.Sprintf("JSON field %s is not named: SQL Value interface can't be implemented", field))
+	}
+	goTypeName := named.Obj().Name()
+
+	return goTypeName, named.Obj().Pkg().Name() == st.packageName
 }
 
 func (m structSQL) Render() []loader.Declaration {
@@ -48,15 +54,11 @@ func (m structSQL) Render() []loader.Declaration {
 	// generate the value interface method
 	for _, field := range m.Fields {
 		if field.Type.Type == sqltypes.SQLDate || field.Type.Type == sqltypes.SQLTime {
-			named, ok := field.Type.Go.(*types.Named)
-			if !ok {
-				panic(fmt.Sprintf("JSON field %s is not named: SQL Value interface can't be implemented", field.GoName))
-			}
-			goTypeName := named.Obj().Name()
-
-			decls = append(decls, loader.Declaration{
-				Id: "datetime_value" + goTypeName,
-				Content: fmt.Sprintf(`
+			goTypeName, isLocal := m.canImplementMethod(field.GoName, field.Type.Go)
+			if isLocal {
+				decls = append(decls, loader.Declaration{
+					Id: "datetime_value" + goTypeName,
+					Content: fmt.Sprintf(`
 				func (s *%s) Scan(src interface{}) error {
 					var tmp pq.NullTime
 					err := tmp.Scan(src)
@@ -71,17 +73,33 @@ func (m structSQL) Render() []loader.Declaration {
 					return pq.NullTime{Time: time.Time(s), Valid: true}.Value()
 				}
 				`, goTypeName, goTypeName, goTypeName),
-			})
-
-		} else if field.Type.JSON != nil {
-			named, ok := field.Type.Go.(*types.Named)
-			if !ok {
-				panic(fmt.Sprintf("JSON field %s is not named: SQL Value interface can't be implemented", field.GoName))
+				})
 			}
-			goTypeName := named.Obj().Name()
-
-			// check if the type is in the same package
-			if m.isTypeLocal(field.Type.Go.(*types.Named)) {
+		} else if arr, isArray := field.Type.Type.(sqltypes.Array); isArray {
+			goTypeName, isLocal := m.canImplementMethod(field.GoName, field.Type.Go)
+			if isLocal {
+				var pqType string
+				switch arr.Element {
+				case "boolean":
+					pqType = "pq.BoolArray"
+				case "integer":
+					pqType = "pq.Int64Array"
+				case "real":
+					pqType = "pq.Float64Array"
+				case "varchar":
+					pqType = "pq.StringArray"
+				}
+				decls = append(decls, loader.Declaration{
+					Id: "array_value" + goTypeName,
+					Content: fmt.Sprintf(`
+					func (s *%s) Scan(src interface{}) error  { return (*%s)(s).Scan(src) }
+					func (s %s) Value() (driver.Value, error) { return %s(s).Value() }
+					`, goTypeName, pqType, goTypeName, pqType),
+				})
+			}
+		} else if field.Type.JSON != nil {
+			goTypeName, isLocal := m.canImplementMethod(field.GoName, field.Type.Go)
+			if isLocal {
 				decls = append(decls, loader.Declaration{
 					Id: "json_value" + goTypeName,
 					Content: fmt.Sprintf(`
