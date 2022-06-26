@@ -78,8 +78,14 @@ func (f Form) typedValues() []TypedParam {
 	return out
 }
 
-func (a API) withBody() bool {
+// returns true if the client API call has an argument
+// for the body
+func (a API) expectBodyParam() bool {
 	return a.Method == http.MethodPost || a.Method == http.MethodPut
+}
+
+func (a API) hasBodyInput() bool {
+	return a.Contrat.Input.Type != nil
 }
 
 func (a API) withFormData() bool {
@@ -99,13 +105,11 @@ func paramsType(params []TypedParam) string {
 }
 
 func (a API) funcArgsName() string {
-	if a.withBody() {
-		if a.withFormData() { // form data mode
-			if fi := a.Contrat.Form.File; fi != "" {
-				return "params, file"
-			}
+	if a.withFormData() { // form data mode
+		if fi := a.Contrat.Form.File; fi != "" {
+			return "params, file"
 		}
-	} else {
+	} else if !a.hasBodyInput() {
 		// params as query params
 		if len(a.Contrat.QueryParams) == 0 {
 			return ""
@@ -122,16 +126,14 @@ func goToTs(enum enums.EnumTable, typ types.Type) tstypes.Type {
 }
 
 func (a API) typeIn(enum enums.EnumTable) string {
-	if a.withBody() {
-		if a.withFormData() { // form data mode
-			params := "params: " + paramsType(a.Contrat.Form.typedValues())
-			if fi := a.Contrat.Form.File; fi != "" {
-				params += ", file: File"
-			}
-			return params
-		} else { // JSON mode
-			return "params: " + a.Contrat.Input.render(enum)
+	if a.withFormData() { // form data mode
+		params := "params: " + paramsType(a.Contrat.Form.typedValues())
+		if fi := a.Contrat.Form.File; fi != "" {
+			params += ", file: File"
 		}
+		return params
+	} else if a.hasBodyInput() { // JSON mode
+		return "params: " + a.Contrat.Input.render(enum)
 	}
 	// params as query params
 	if len(a.Contrat.QueryParams) == 0 {
@@ -186,28 +188,29 @@ func (c Contrat) convertTypedQueryParams() string {
 }
 
 func (a API) generateCall(enum enums.EnumTable) string {
-	var template string
-	if a.withBody() {
-		if a.withFormData() { // add the creation of FormData
-			template += "const formData = new FormData()\n"
-			if fi := a.Contrat.Form.File; fi != "" {
-				template += fmt.Sprintf("formData.append(%q, file, file.name)\n", fi)
-			}
-			for _, param := range a.Contrat.Form.Values {
-				template += fmt.Sprintf("formData.append(%q, params[%q])\n", param, param)
-			}
-			template += "const rep:AxiosResponse<%s> = await Axios.%s(fullUrl, formData, { headers : this.getHeaders() })"
-		} else {
-			template = "const rep:AxiosResponse<%s> = await Axios.%s(fullUrl, params, { headers : this.getHeaders() })"
-		}
-	} else {
-		callParams := ", { headers: this.getHeaders() }"
-		if len(a.Contrat.QueryParams) != 0 {
-			callParams = fmt.Sprintf(", { params: %s, headers : this.getHeaders() }", a.Contrat.convertTypedQueryParams())
-		}
-		template = "const rep:AxiosResponse<%s> = await Axios.%s(fullUrl" + callParams + ")"
+	callParams := "{ headers: this.getHeaders() }"
+	if len(a.Contrat.QueryParams) != 0 {
+		callParams = fmt.Sprintf("{ params: %s, headers : this.getHeaders() }", a.Contrat.convertTypedQueryParams())
 	}
-	return fmt.Sprintf(template, a.typeOut(enum), a.methodLower())
+
+	var template string
+	if a.withFormData() { // add the creation of FormData
+		template += "const formData = new FormData()\n"
+		if fi := a.Contrat.Form.File; fi != "" {
+			template += fmt.Sprintf("formData.append(%q, file, file.name)\n", fi)
+		}
+		for _, param := range a.Contrat.Form.Values {
+			template += fmt.Sprintf("formData.append(%q, params[%q])\n", param, param)
+		}
+		template += "const rep:AxiosResponse<%s> = await Axios.%s(fullUrl, formData, %s)"
+	} else if a.hasBodyInput() {
+		template = "const rep:AxiosResponse<%s> = await Axios.%s(fullUrl, params, %s)"
+	} else if !a.hasBodyInput() && a.expectBodyParam() {
+		template = "const rep:AxiosResponse<%s> = await Axios.%s(fullUrl, null, %s)"
+	} else {
+		template = "const rep:AxiosResponse<%s> = await Axios.%s(fullUrl, %s)"
+	}
+	return fmt.Sprintf(template, a.typeOut(enum), a.methodLower(), callParams)
 }
 
 func (a API) generateMethod(enum enums.EnumTable) string {
