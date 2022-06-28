@@ -37,7 +37,7 @@ type handler struct {
 }
 
 func (d *handler) HandleType(typ types.Type) loader.Type {
-	out := d.analyseType(typ)
+	out := d.analyseType(typ, nil)
 	return out
 }
 
@@ -77,6 +77,20 @@ func (d *handler) processImported() string {
 
 func (d handler) Footer() string { return "" }
 
+type importMap struct {
+	goPackage      string
+	dartImportPath string
+}
+
+// check for tag with the form <name>:<path>
+func parseDartExternTag(tag string) (importMap, bool) {
+	de := reflect.StructTag(tag).Get("dart-extern")
+	if i := strings.Index(de, ":"); i != -1 {
+		return importMap{goPackage: de[:i], dartImportPath: de[i+1:]}, true
+	}
+	return importMap{}, false
+}
+
 func (d handler) convertFields(structType *types.Struct) []classField {
 	var out []classField
 	for i := 0; i < structType.NumFields(); i++ {
@@ -87,30 +101,23 @@ func (d handler) convertFields(structType *types.Struct) []classField {
 			continue
 		}
 
-		if dartExtern := reflect.StructTag(tag).Get("dart-extern"); dartExtern != "" {
-			// do not generate type definition for the field type, rely on external import
-			na, ok := field.Type().(*types.Named)
-			if !ok {
-				panic("dart-extern only works with named types")
-			}
-
-			ty := d.analyseImportedType(na, dartExtern)
-
-			out = append(out, classField{name: finalName, type_: ty})
-			continue
+		var imported *importMap
+		if extern, ok := parseDartExternTag(tag); ok {
+			// do not generate type definition for imported type, rely on external import
+			imported = &extern
 		}
 
 		// special case for embedded structs : merge the struct fields
 		if field.Embedded() {
 			// recursion on embeded struct
-			dartField := d.analyseType(field.Type())
+			dartField := d.analyseType(field.Type(), imported)
 			if st, isStruct := dartField.(*class); isStruct {
 				out = append(out, st.fields...)
 			}
 			continue
 		}
 
-		dartField := d.analyseType(field.Type())
+		dartField := d.analyseType(field.Type(), imported)
 		out = append(out, classField{name: finalName, type_: dartField})
 	}
 	return out
@@ -133,36 +140,25 @@ func analyseBasicType(typ *types.Basic) basic {
 
 // analyseType converts a go type into a ts equivalent
 // Named types (such as non-anonymous structs or enums) are extracted into new top levels declarations
-func (d *handler) analyseType(typ types.Type) dartType {
+// if externImport is not nil, external named types (such as client.Answer) are converted to `imported` types
+func (d *handler) analyseType(typ types.Type, externImport *importMap) dartType {
 	if dt, ok := d.types[typ]; ok {
 		return dt
 	}
-	out := d.createType(typ)
-	d.itfs.NewInterface(typ)
+	out := d.createType(typ, externImport)
+	// do not register imported as interface
+	if _, isImported := out.(imported); !isImported {
+		d.itfs.NewInterface(typ)
+	}
 	d.types[typ] = out
 	return out
 }
 
-func (d handler) analyseImportedType(na *types.Named, externPath string) dartType {
-	if dt, ok := d.types[na]; ok {
-		return dt
-	}
-	out := imported{name_: na.Obj().Name(), importPath: externPath}
-	d.types[na] = out
-	return out
-}
-
-func (d handler) createType(typ types.Type) dartType {
+func (d handler) createType(typ types.Type, externImport *importMap) dartType {
 	if typ == nil {
 		return dartAny
 	}
 	na, isNamed := typ.(*types.Named)
-
-	// special case for Date
-	// if isNamed && named.Obj().Name() == "Date" {
-	// 	topLevelDecl.Add(timesStringDefinition{})
-	// 	return TsDate
-	// }
 
 	// special case for time.Time
 	if utils.IsUnderlyingTime(typ) {
@@ -172,6 +168,12 @@ func (d handler) createType(typ types.Type) dartType {
 	if isNamed {
 		finalName := na.Obj().Name()
 		origin := typ.String()
+
+		if externImport != nil { // check for external refs
+			if na.Obj().Pkg().Name() == externImport.goPackage {
+				return imported{name_: na.Obj().Name(), importPath: externImport.dartImportPath}
+			}
+		}
 
 		// first we look for enums type (which usually have underlying basic types)
 		e, isEnum := d.enumsTable[finalName]
@@ -193,7 +195,7 @@ func (d handler) createType(typ types.Type) dartType {
 		}
 
 		// otherwise, extract underlying type
-		underlyingDartType := d.analyseType(typ.Underlying())
+		underlyingDartType := d.analyseType(typ.Underlying(), externImport)
 
 		// type name is required for classes
 		cl, isClass := underlyingDartType.(*class)
@@ -211,7 +213,7 @@ func (d handler) createType(typ types.Type) dartType {
 		return analyseBasicType(under)
 	case *types.Pointer:
 		// indirection
-		return d.analyseType(under.Elem())
+		return d.analyseType(under.Elem(), externImport)
 	case *types.Struct:
 		out := &class{renderCache: d.renderCache}
 		// register the struct before calling convertFields
@@ -220,15 +222,15 @@ func (d handler) createType(typ types.Type) dartType {
 		out.fields = d.convertFields(under)
 		return out
 	case *types.Array:
-		valueDart := d.analyseType(under.Elem())
+		valueDart := d.analyseType(under.Elem(), externImport)
 		return list{element: valueDart}
 	case *types.Slice:
-		valueDart := d.analyseType(under.Elem())
+		valueDart := d.analyseType(under.Elem(), externImport)
 		return list{element: valueDart}
 	case *types.Map:
 		return dict{
-			key:     d.analyseType(under.Key()),
-			element: d.analyseType(under.Elem()),
+			key:     d.analyseType(under.Key(), externImport),
+			element: d.analyseType(under.Elem(), externImport),
 		}
 	}
 	// unhandled type:
@@ -241,6 +243,11 @@ func (h *handler) processInterfaces() {
 
 		for _, member := range itf.Members {
 			dartMember := h.types[member]
+
+			if dartMember == nil {
+				panic("missing member for " + member.String())
+			}
+
 			if cl, isClass := dartMember.(*class); isClass {
 				cl.interfaces = append(cl.interfaces, dartITF.name_)
 			}

@@ -223,17 +223,29 @@ List<Node> listNodeFromJson(dynamic json) {
 	
 	
 	
+Map<int,Rat> dictIntRatFromJson(dynamic json) {
+		if (json == null) {
+			return {};
+		}
+		return (json as JSON).map((k,v) => MapEntry(int.parse(k), ratFromJson(v)));
+	}
+	
+	Map<String, dynamic> dictIntRatToJson(Map<int,Rat> item) {
+		return item.map((k,v) => MapEntry(intToJson(k).toString(), ratToJson(v)));
+	}
+	
 
 		// github.com/benoitkugler/structgen/dart-types/test.withExternalRef
 		class WithExternalRef  {
 		final Context field1;
 final Context field2;
+final Map<int,Rat> field3;
 
-		const WithExternalRef(this.field1, this.field2);
+		const WithExternalRef(this.field1, this.field2, this.field3);
 
 		@override
 		String toString() {
-			return "WithExternalRef($field1, $field2)";
+			return "WithExternalRef($field1, $field2, $field3)";
 		}
 		}
 		
@@ -242,14 +254,16 @@ final Context field2;
 		final json = (json_ as JSON);
 		return WithExternalRef(
 			contextFromJson(json['Field1']),
-contextFromJson(json['Field2'])
+contextFromJson(json['Field2']),
+dictIntRatFromJson(json['Field3'])
 		);
 	}
 	
 	JSON withExternalRefToJson(WithExternalRef item) {
 		return {
 			"Field1" : contextToJson(item.field1),
-"Field2" : contextToJson(item.field2)
+"Field2" : contextToJson(item.field2),
+"Field3" : dictIntRatToJson(item.field3)
 		};
 	}
 	

@@ -1,6 +1,9 @@
 package test
 
-import "context"
+import (
+	"context"
+	"math/big"
+)
 
 type concret1 struct {
 	List2 []int
@@ -34,8 +37,9 @@ type model struct {
 type ListV []itfName
 
 type withExternalRef struct {
-	Field1 context.Context `dart-extern:"extern.dart"`
-	Field2 context.Context `dart-extern:"extern.dart"`
+	Field1 context.Context `dart-extern:"context:extern.dart"`
+	Field2 context.Context `dart-extern:"context:extern.dart"`
+	Field3 map[int]big.Rat `dart-extern:"big:extern.dart"`
 }
 
 type node struct {
