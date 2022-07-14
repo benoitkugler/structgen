@@ -252,7 +252,10 @@ func (h *handler) processInterfaces() {
 				cl.interfaces = append(cl.interfaces, dartITF.name_)
 			}
 
-			dartITF.members = append(dartITF.members, dartMember)
+			dartITF.members = append(dartITF.members, typeWithTag{
+				type_: dartMember,
+				tag:   member.Obj().Name(),
+			})
 		}
 	}
 }

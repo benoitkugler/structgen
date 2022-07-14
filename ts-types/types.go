@@ -204,11 +204,16 @@ func (t *class) Render() (decls []loader.Declaration) {
 	return decls
 }
 
+type typeWithTag struct {
+	type_ Type
+	tag   string
+}
+
 type union struct {
 	origin  string
 	name_   string
 	type_   *types.Interface
-	members []Type // completed after analysis
+	members []typeWithTag // completed after analysis
 }
 
 func (u *union) Render() []loader.Declaration {
@@ -218,10 +223,10 @@ func (u *union) Render() []loader.Declaration {
 		membersDecl []loader.Declaration
 	)
 	enumKindName := u.name_ + "Kind"
-	for i, m := range u.members {
-		members = append(members, m.Name())
-		kindEnum = append(kindEnum, fmt.Sprintf("%s = %d", m.Name(), i))
-		membersDecl = append(membersDecl, m.Render()...)
+	for _, m := range u.members {
+		members = append(members, m.type_.Name())
+		kindEnum = append(kindEnum, fmt.Sprintf("%s = %q", m.type_.Name(), m.tag))
+		membersDecl = append(membersDecl, m.type_.Render()...)
 	}
 	code := fmt.Sprintf(`
 	export enum %s {

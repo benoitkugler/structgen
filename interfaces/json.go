@@ -9,38 +9,39 @@ import (
 
 // return the go code implementing JSON convertions
 func (u Interface) json() string {
-	var casesFrom, casesTo, kinds []string
+	var casesFrom, casesTo, kindDecls []string
 
 	name := u.Name.Obj().Name()
 	wrapperName := name + "Wrapper"
 
-	for i, member := range u.Members {
+	for _, member := range u.Members {
 		memberName := member.Obj().Name()
-		kinds = append(kinds, memberName+name[0:2]+"Kind") // note that the index i is matching the iota used in kinds
+		kindValue := memberName
+		kindVarName := memberName + name[0:2] + "Kind"
+		kindDecls = append(kindDecls, fmt.Sprintf("%s = %q", kindVarName, kindValue))
 
-		casesFrom = append(casesFrom, fmt.Sprintf(`case %d:
+		casesFrom = append(casesFrom, fmt.Sprintf(`case %q:
 			var data %s
 			err = json.Unmarshal(wr.Data, &data)
 			out.Data = data
-	`, i, memberName))
+	`, kindValue, memberName))
 
 		caseTo := fmt.Sprintf(`case %s:
-			wr = wrapper{Kind: %d, Data: data}
-		`, memberName, i)
+			wr = wrapper{Kind: %q, Data: data}
+		`, memberName, kindValue)
 		casesTo = append(casesTo, caseTo)
 	}
 
 	codeKinds := fmt.Sprintf(`
 	const (
-		%s = iota 
 		%s
 	)
-	`, kinds[0], strings.Join(kinds[1:], "\n"))
+	`, strings.Join(kindDecls, "\n"))
 
 	codeFrom := fmt.Sprintf(`func (out *%s) UnmarshalJSON(src []byte) error {
 		var wr struct {
 			Data json.RawMessage
-			Kind int
+			Kind string
 		}
 		err := json.Unmarshal(src, &wr)
 		if err != nil {
@@ -58,7 +59,7 @@ func (u Interface) json() string {
 	codeTo := fmt.Sprintf(`func (item %s) MarshalJSON() ([]byte, error) {
 		type wrapper struct {
 			Data interface{}
-			Kind int
+			Kind string
 		}
 		var wr wrapper
 		switch data := item.Data.(type) {

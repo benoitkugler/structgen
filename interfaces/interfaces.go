@@ -13,13 +13,15 @@ import (
 
 // Interface represents a (named) Go interface.
 type Interface struct {
-	Name    *types.Named   // Go type
-	Members []*types.Named // the types implementing this interface, sorted by name
+	Name *types.Named // Go type
+	// The types implementing this interface, sorted by name
+	// Obj().Name() should be used as idenfifier
+	Members []*types.Named
 }
 
 func (itf Interface) hasMember(typ *types.Named) bool {
 	for _, t := range itf.Members {
-		if t == typ {
+		if (*types.Named)(t) == typ {
 			return true
 		}
 	}

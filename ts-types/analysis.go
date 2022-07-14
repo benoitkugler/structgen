@@ -64,7 +64,10 @@ func (h handler) ProcessInterfaces() {
 			if tsMember == nil {
 				panic(fmt.Sprintf("interface member %s not analyzed", member.Obj().Name()))
 			}
-			tsITF.members = append(tsITF.members, tsMember)
+			tsITF.members = append(tsITF.members, typeWithTag{
+				type_: tsMember,
+				tag:   member.Obj().Name(),
+			})
 		}
 	}
 }

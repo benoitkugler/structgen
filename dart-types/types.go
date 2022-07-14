@@ -279,12 +279,17 @@ func (n named) Render() []loader.Declaration {
 	return out
 }
 
+type typeWithTag struct {
+	type_ dartType
+	tag   string
+}
+
 // interface type, handled as union type
 type union struct {
 	origin  string
 	name_   string
 	type_   *types.Interface
-	members []dartType // completed after analysis
+	members []typeWithTag // completed after analysis
 }
 
 func (u *union) name() string       { return u.name_ }
@@ -293,7 +298,7 @@ func (u *union) functionId() string { return lowerFirst(u.name_) }
 func (u *union) Render() (out []loader.Declaration) {
 	// ensure order
 	for _, member := range u.members {
-		out = append(out, member.Render()...)
+		out = append(out, member.type_.Render()...)
 	}
 
 	content := fmt.Sprintf(`abstract class %s {}

@@ -125,12 +125,13 @@ func (u union) json() string {
 	var casesFrom, casesTo []string
 
 	for i, member := range u.members {
-		casesFrom = append(casesFrom, fmt.Sprintf(`case  %d:
-			return %sFromJson(data);`, i, member.functionId()))
+		kindValue := member.tag
+		casesFrom = append(casesFrom, fmt.Sprintf(`case %q:
+			return %sFromJson(data);`, kindValue, member.type_.functionId()))
 
 		caseTo := fmt.Sprintf(`if (item is %s) {
-			return {'Kind': %d, 'Data': %sToJson(item)};
-		}`, member.name(), i, member.functionId())
+			return {'Kind': %q, 'Data': %sToJson(item)};
+		}`, member.type_.name(), member.tag, member.type_.functionId())
 		if i != 0 {
 			caseTo = "else " + caseTo
 		}
@@ -139,7 +140,7 @@ func (u union) json() string {
 
 	codeFrom := fmt.Sprintf(`%s %sFromJson(dynamic json_) {
 		final json = json_ as JSON;
-		final kind = json['Kind'] as int;
+		final kind = json['Kind'] as String;
 		final data = json['Data'];
 		switch (kind) {
 			%s
