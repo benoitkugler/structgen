@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"fmt"
+	"go/types"
 	"strings"
 
 	"github.com/benoitkugler/structgen/loader"
@@ -40,8 +41,8 @@ func (u Interface) json() string {
 
 	codeFrom := fmt.Sprintf(`func (out *%s) UnmarshalJSON(src []byte) error {
 		var wr struct {
-			Data json.RawMessage
 			Kind string
+			Data json.RawMessage
 		}
 		err := json.Unmarshal(src, &wr)
 		if err != nil {
@@ -120,13 +121,87 @@ func (s itfSlice) json() string {
 	}`, s.name, s.elem.Name.Obj().Name(), s.name, s.elem.Name.Obj().Name(), s.name)
 }
 
-type class struct {
-	fields []loader.Type
+type classField struct {
+	goType *types.Var
+	// may be empty if ignored
+	type_ loader.Type
 }
 
+func (cf classField) requireWrapper() bool {
+	_, isITF := cf.goType.Type().Underlying().(*types.Interface)
+	return isITF
+}
+
+type class struct {
+	goType *types.Named
+	fields []classField
+}
+
+func (cl class) name() string { return cl.goType.Obj().Name() }
+
 func (cl class) Render() (out []loader.Declaration) {
+	var requireWrapper bool
+	// render the field decls
 	for _, field := range cl.fields {
-		out = append(out, field.Render()...)
+		if field.type_ != nil {
+			out = append(out, field.type_.Render()...)
+		}
+		if field.requireWrapper() {
+			requireWrapper = true
+		}
+	}
+
+	// check for field requiring the wrapper
+	if requireWrapper {
+		var fieldsDef, fieldsAssignToWrapper, fieldsAssignFromWrapper []string
+		for _, field := range cl.fields {
+			fieldName := field.goType.Name()
+
+			fieldType := types.TypeString(field.goType.Type(), types.RelativeTo(cl.goType.Obj().Pkg()))
+			fieldAssignToW := fmt.Sprintf("item.%s", fieldName)
+			fieldAssignFromW := fmt.Sprintf("wr.%s", fieldName)
+			if field.requireWrapper() { // wrapper field
+				fieldType = fieldType + "Wrapper"
+				fieldAssignToW = fmt.Sprintf("%s{item.%s}", fieldType, fieldName)
+				fieldAssignFromW = fmt.Sprintf("wr.%s.Data", fieldName)
+			}
+
+			fieldsDef = append(fieldsDef, fieldName+" "+fieldType)
+			fieldsAssignToWrapper = append(fieldsAssignToWrapper, fmt.Sprintf("%s: %s,", fieldName, fieldAssignToW))
+			fieldsAssignFromWrapper = append(fieldsAssignFromWrapper, fmt.Sprintf("item.%s = %s", fieldName, fieldAssignFromW))
+		}
+
+		code := fmt.Sprintf(`
+		func (item %s) MarshalJSON() ([]byte, error) {
+			type wrapper struct {
+				%s
+			}
+			wr := wrapper{
+				%s
+			}
+			return json.Marshal(wr)
+		}
+
+		func (item *%s) UnmarshalJSON(src []byte) error {
+			type wrapper struct {
+				%s
+			}
+			var wr wrapper 
+			err := json.Unmarshal(src, &wr)
+			if err != nil {
+				return err
+			}
+			%s
+			return nil
+		}
+		`,
+			cl.name(), strings.Join(fieldsDef, "\n"), strings.Join(fieldsAssignToWrapper, "\n"),
+			cl.name(), strings.Join(fieldsDef, "\n"), strings.Join(fieldsAssignFromWrapper, "\n"),
+		)
+		out = append(out, loader.Declaration{
+			Id:      cl.name() + "_json",
+			Content: code,
+		})
 	}
 	return out
 }

@@ -232,7 +232,7 @@ const vUnion = `
 		RETURNS boolean
 		AS $$
 	BEGIN
-		IF jsonb_typeof(data) != 'object' OR jsonb_typeof(data->'Kind') != 'number' OR jsonb_typeof(data->'Data') = 'null' THEN 
+		IF jsonb_typeof(data) != 'object' OR jsonb_typeof(data->'Kind') != 'string' OR jsonb_typeof(data->'Data') = 'null' THEN 
 			RETURN FALSE;
 		END IF;
 		CASE 
@@ -245,11 +245,12 @@ const vUnion = `
 
 func (u union) Validations() (out []loader.Declaration) {
 	var cases []string
-	for kind, member := range u.members {
-		cases = append(cases, fmt.Sprintf("WHEN (data->'Kind')::int = %d THEN \n RETURN %s(data->'Data');", kind, FunctionName(member)))
+	for _, member := range u.members {
+		kind := member.tag
+		cases = append(cases, fmt.Sprintf("WHEN data->>'Kind' = '%s' THEN \n RETURN %s(data->'Data');", kind, FunctionName(member.type_)))
 
 		// generate validation function for members
-		out = append(out, member.Validations()...)
+		out = append(out, member.type_.Validations()...)
 	}
 
 	cases = append(cases, "ELSE RETURN FALSE;") // unknown Kind type

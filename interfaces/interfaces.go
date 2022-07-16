@@ -5,7 +5,6 @@ package interfaces
 import (
 	"fmt"
 	"go/types"
-	"reflect"
 	"sort"
 
 	"github.com/benoitkugler/structgen/loader"
@@ -95,22 +94,18 @@ func (h handler) Footer() string {
 	return ""
 }
 
-// HandleType implements loader.Handler, but always return a nil value.
+// HandleType implements loader.Handler, but often return a nil value.
 func (h *handler) HandleType(typ types.Type) loader.Type {
 	switch under := typ.Underlying().(type) {
 	case *types.Struct:
 		var out class
+		out.goType = typ.(*types.Named)
 		for i := 0; i < under.NumFields(); i++ {
-			tag := under.Tag(i)
-
-			if dartExtern := reflect.StructTag(tag).Get("dart-extern"); dartExtern != "" {
-				// ignore this field
-				continue
-			}
-
-			if itf := h.HandleType(under.Field(i).Type()); itf != nil {
-				out.fields = append(out.fields, itf)
-			}
+			field := under.Field(i)
+			out.fields = append(out.fields, classField{
+				goType: field,
+				type_:  h.HandleType(field.Type()),
+			})
 		}
 		return out
 	case *types.Slice:

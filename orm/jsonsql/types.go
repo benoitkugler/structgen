@@ -175,10 +175,15 @@ type enumValue struct {
 	enumType enums.Type
 }
 
+type typeWithTag struct {
+	type_ TypeJSON
+	tag   string
+}
+
 // sum type, defined in Go by a closed interface
 type union struct {
 	itf     interfaces.Interface
-	members []TypeJSON // associated with itf.Members
+	members []typeWithTag // associated with itf.Members
 }
 
 func (u union) Id() string {
@@ -188,9 +193,12 @@ func (u union) Id() string {
 func (an *Analyzer) newUnion(t *types.Named) union {
 	ana := interfaces.NewAnalyser()
 	itf, _ := ana.NewInterface(t)
-	out := union{itf: itf, members: make([]TypeJSON, len(itf.Members))}
+	out := union{itf: itf, members: make([]typeWithTag, len(itf.Members))}
 	for i, m := range itf.Members {
-		out.members[i] = an.Convert(m)
+		out.members[i] = typeWithTag{
+			type_: an.Convert(m),
+			tag:   m.Obj().Name(),
+		}
 	}
 	return out
 }

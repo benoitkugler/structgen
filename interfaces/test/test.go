@@ -14,10 +14,17 @@ type member2 struct {
 	B int
 }
 
-type union2 interface {
+type vunion2 interface {
 	isUnion2()
 }
 
 func (member1) isUnion2() {}
 
-type ITFSlice []union2
+type ITFSlice []vunion2
+
+type StructWithITF struct {
+	Member        union1
+	Other         int
+	Other2        string
+	NoNeedWrapper ITFSlice
+}
