@@ -184,7 +184,11 @@ func (t *class) Render() (decls []loader.Declaration) {
 
 	out := "// " + t.origin + "\n"
 
-	if len(t.embeded) == 0 { // prefer interface syntax
+	isEmpty := len(t.fields) == 0 && len(t.embeded) == 0
+	if isEmpty {
+		// TS does not like empty interface
+		out += fmt.Sprintf("export type %s = Record<string, never>", t.name_)
+	} else if len(t.embeded) == 0 { // prefer interface syntax
 		out += fmt.Sprintf("export interface %s {\n", t.name_)
 	} else {
 		out += fmt.Sprintf("export type %s = {\n", t.name_)
@@ -194,7 +198,9 @@ func (t *class) Render() (decls []loader.Declaration) {
 		decls = append(decls, field.Type.Render()...)
 		out += fmt.Sprintf("\t%s: %s,\n", field.Name, field.Type.Name())
 	}
-	out += "}"
+	if !isEmpty {
+		out += "}"
+	}
 	for _, embeded := range t.embeded {
 		decls = append(decls, embeded.Render()...)
 		out += " & " + embeded.Name()

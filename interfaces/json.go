@@ -139,6 +139,18 @@ type class struct {
 
 func (cl class) name() string { return cl.goType.Obj().Name() }
 
+func myQualifier(pkg *types.Package) types.Qualifier {
+	if pkg == nil {
+		return nil
+	}
+	return func(other *types.Package) string {
+		if pkg == other {
+			return "" // same package; unqualified
+		}
+		return other.Name()
+	}
+}
+
 func (cl class) Render() (out []loader.Declaration) {
 	var requireWrapper bool
 	// render the field decls
@@ -157,7 +169,8 @@ func (cl class) Render() (out []loader.Declaration) {
 		for _, field := range cl.fields {
 			fieldName := field.goType.Name()
 
-			fieldType := types.TypeString(field.goType.Type(), types.RelativeTo(cl.goType.Obj().Pkg()))
+			fieldType := types.TypeString(field.goType.Type(), myQualifier(cl.goType.Obj().Pkg()))
+
 			fieldAssignToW := fmt.Sprintf("item.%s", fieldName)
 			fieldAssignFromW := fmt.Sprintf("wr.%s", fieldName)
 			if field.requireWrapper() { // wrapper field
